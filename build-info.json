@@ -1,0 +1,10 @@
+{
+    "distribution_style": true,
+    "identifier": "com.anothertoolappleshouldhaveprovided.nudge",
+    "install_location": "/",
+    "name": "nudge-${version}.pkg",
+    "ownership": "recommended",
+    "postinstall_action": "none",
+    "suppress_bundle_relocation": true,
+    "version": "1.0"
+}

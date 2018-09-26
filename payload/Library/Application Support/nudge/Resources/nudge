@@ -1,0 +1,389 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+'''nudge - python wrapper for major OS updates.'''
+import optparse
+import os
+import platform
+import subprocess
+import time
+import webbrowser
+from datetime import datetime
+from distutils.version import LooseVersion
+import Foundation
+import objc
+from AppKit import NSApplication, NSImage
+from SystemConfiguration import SCDynamicStoreCopyConsoleUser
+
+from nibbler import *
+
+
+class timerController(Foundation.NSObject):
+    '''Thanks to frogor for help in figuring this part out'''
+    def activateWindow_(self, timer_obj):
+        print 'Re-activating .nib to the foreground'
+        # Move the application to the front
+        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+        # Move the main window to the front
+        # Nibbler objects have a .win property (...should probably be .window)
+        # that contains a reference to the first NSWindow it finds
+        nudge.win.makeKeyAndOrderFront_(None)
+
+
+def button_moreinfo():
+    '''Open browser more info button'''
+    webbrowser.open_new_tab(moreinfourl)
+
+
+def button_update():
+    '''Start the update process'''
+    cmd = ['/usr/bin/open', pathtoapp]
+    subprocess.Popen(cmd)
+
+
+def button_ok():
+    '''Quit out of nudge if user hits the ok button'''
+    nudge.quit()
+
+
+def button_understand():
+    '''Add an extra button to force the user to read the dialog, prior to being
+    able to exit the UI.'''
+    nudge.views['button.understand'].setHidden_(True)
+    nudge.views['button.ok'].setHidden_(False)
+    nudge.views['button.ok'].setEnabled_(True)
+
+
+def get_console_username_info():
+    '''Uses Apple's SystemConfiguration framework to get the current
+    console username'''
+    return SCDynamicStoreCopyConsoleUser(None, None, None)
+
+
+def get_os_version():
+    '''Return OS version.'''
+    return LooseVersion(platform.mac_ver()[0])
+
+
+def get_parsed_options():
+    '''Return the parsed options and args for this application.'''
+    # Options
+    usage = '%prog [options]'
+    o = optparse.OptionParser(usage=usage)
+    o.add_option('--cutoffdate',
+                 help=('Required: UTC cutoff date 2018-12-31-00:00.'))
+    o.add_option('--cutoffdatewarning',
+                 default=3,
+                 help=('Optional: Days from cutoff date to start warning.'))
+    o.add_option('--logopath',
+                 default='company_logo.png',
+                 help=('Optional: Path to company logo.'))
+    o.add_option('--h1text',
+                 default='Ready to start the update?',
+                 help=('Optional: Manual enrollment text.'))
+    o.add_option('--h2text',
+                 default='Click on the button below.',
+                 help=('Optional: Manual enrollment text.'))
+    o.add_option('--minimumosversion',
+                 default='10.13.6',
+                 help=('Required: Minimum OS version.'))
+    o.add_option('--moreinfourl',
+                 default='https://google.com',
+                 help=('Required: More info URL.'))
+    o.add_option('--notimer', default=False,
+                 help=('Optional: Do not use nudge timer functionality.'),
+                 action='store_true')
+    o.add_option('--paragraph1',
+                 default='A fully up-to-date device is required to ensure '
+                 'that IT can your accurately protect your computer.',
+                 help=('Required: Paragraph 1 text.'))
+    o.add_option('--paragraph2',
+                 default='If you do not update your computer, you may lose '
+                 'access to some items necessary for your day-to-day tasks.',
+                 help=('Required: Paragraph 2 text.'))
+    o.add_option('--paragraph3',
+                 default='To begin the update, simply click on the button '
+                 'below and follow the provided steps.',
+                 help=('Required: Paragraph 3 text.'))
+    o.add_option('--pathtoapp',
+                 default='/Applications/Install macOS High Sierra.app',
+                 help=('Required: Path to macOS app.'))
+    o.add_option('--subtitletext',
+                 default='A friendly reminder from your local IT team',
+                 help=('Required: Sub-title text.'))
+    o.add_option('--timerday1',
+                 default=600,
+                 help=('Optional: Time in seconds for 24-hour nudge timer.'))
+    o.add_option('--timerday3',
+                 default=7200,
+                 help=('Optional: Time in seconds for 72-hour nudge timer.'))
+    o.add_option('--timerelapsed',
+                 default=10,
+                 help=('Optional: Time in seconds for elapsed nudge timer.'))
+    o.add_option('--timerfinal',
+                 default=60,
+                 help=('Optional: Time in seconds for 1-hour nudge timer.'))
+    o.add_option('--timerinital',
+                 default=14400,
+                 help=('Optional: Time in seconds for initial nudge timer.'))
+    o.add_option('--titletext',
+                 default='macOS Update',
+                 help=('Optional: Title Text.'))
+    o.add_option('--updatesspath',
+                 default='update_ss.png',
+                 help=('Optional: Path to update screenshot.'))
+    o.add_option('--updatetext',
+                 default='A security update is required on your machine.',
+                 help=('Required: Due date text.'))
+
+    return o.parse_args()
+
+
+def get_serial():
+    '''Get system serial number'''
+    # Credit to Michael Lynn
+    iokit_bundle = NSBundle.bundleWithIdentifier_("com.apple.framework.IOKit")
+    functions = [
+        ("IOServiceGetMatchingService", b"II@"),
+        ("IOServiceMatching", b"@*"),
+        ("IORegistryEntryCreateCFProperty", b"@I@@I")
+    ]
+    objc.loadBundleFunctions(iokit_bundle, globals(), functions)
+
+    kio_master_port_default = 0
+    kio_platform_serial_number_key = 'IOPlatformSerialNumber'
+    kcf_allocator_default = None
+
+    # pylint: disable=undefined-variable
+    platform_expert = IOServiceGetMatchingService(
+        kio_master_port_default,
+        IOServiceMatching("IOPlatformExpertDevice")
+    )
+    serial = IORegistryEntryCreateCFProperty(
+        platform_expert,
+        kio_platform_serial_number_key,
+        kcf_allocator_default,
+        0
+    )
+    # pylint: enable=undefined-variable
+    return serial
+
+
+def load_nudge_globals():
+    '''Try to figure out the path of nudge.nib and load it.'''
+    try:
+        # Figure out the local path of nudge
+        global nudge_path
+        nudge_path = os.path.dirname(os.path.realpath(__file__))
+        # Setup our global nudge variable to inject into our nib file
+        global nudge
+        nudge = Nibbler(os.path.join(nudge_path, 'nudge.nib'))
+    except IOError:
+        print 'Unable to load nudge nib file!'
+        exit(20)
+
+
+def nudge_already_loaded():
+    '''Check if nudge is already loaded'''
+    nudge_string = '/Library/Application Support/nudge/Resources/nudge'
+    cmd = ['/bin/ps', '-o', 'pid', '-o', 'command']
+    run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, err = run.communicate()
+    status = output.split('\n')
+    current_pid = str(os.getpid())
+    for line in status:
+        if nudge_string in line:
+            if current_pid in line:
+                pass
+            else:
+                return True
+    return False
+
+
+def main():
+    '''Main thread'''
+    opts, _ = get_parsed_options()
+    main_nudge_path = '/Library/Application Support/nudge'
+
+    more_info_url_set = bool(opts.moreinfourl != 'https://google.com')
+
+    if get_os_version() >= LooseVersion(opts.minimumosversion):
+        print 'OS version is higher than minimum threshold: %s' % str(get_os_version())
+        exit(0)
+    else:
+        print 'OS version is below the minimum threshold: %s' % str(get_os_version())
+
+    if nudge_already_loaded():
+        print 'nudge already loaded!'
+        exit(0)
+
+    load_nudge_globals()
+    global moreinfourl
+    moreinfourl = opts.moreinfourl
+    global pathtoapp
+    pathtoapp = opts.pathtoapp
+
+    if not os.path.exists(pathtoapp):
+        print 'Update application not found!'
+        exit(1)
+
+    # Get the current username
+    user_name, current_user_uid, _ = get_console_username_info()
+
+    # Bail if we are not in a user session.
+    if user_name in (None, u'loginwindow', u'_mbsetupuser'):
+        exit(0)
+
+    # Use the paths defined, or default to pngs in the same local path of
+    # nudge
+    for index, path in enumerate([opts.logopath, opts.updatesspath]):
+        if path in ('company_logo.png', 'update_ss.png'):
+            local_png_path = os.path.join(
+                nudge_path, path).replace(' ', '%20')
+        else:
+            local_png_path = os.path.join(path).replace(' ', '%20')
+        foundation_nsurl_path = Foundation.NSURL.URLWithString_(
+            'file:' + local_png_path)
+        foundation_nsdata = Foundation.NSData.dataWithContentsOfURL_(
+            foundation_nsurl_path)
+        foundation_nsimage = NSImage.alloc().initWithData_(
+            foundation_nsdata)
+        if index == 0:
+            nudge.views['image.companylogo'].setImage_(foundation_nsimage)
+        else:
+            nudge.views['image.updatess'].setImage_(foundation_nsimage)
+
+    # Attach all the nib buttons to functions
+    nudge.attach(button_update, 'button.update')
+    nudge.attach(button_moreinfo, 'button.moreinfo')
+    nudge.attach(button_ok, 'button.ok')
+    nudge.attach(button_understand, 'button.understand')
+
+    # Setup the UI fields
+    nudge.views['field.titletext'].setStringValue_(opts.titletext)
+    nudge.views['field.subtitletext'].setStringValue_(opts.subtitletext)
+    nudge.views['field.updatetext'].setStringValue_(opts.updatetext)
+    nudge.views['field.paragraph1'].setStringValue_(opts.paragraph1)
+    nudge.views['field.paragraph2'].setStringValue_(opts.paragraph2)
+    nudge.views['field.paragraph3'].setStringValue_(opts.paragraph3)
+    nudge.views['field.h1text'].setStringValue_(opts.h1text)
+    nudge.views['field.h2text'].setStringValue_(opts.h2text)
+
+    # Dynamically set username and serialnumber
+    nudge.views['field.username'].setStringValue_(str(user_name))
+    nudge.views['field.serialnumber'].setStringValue_(str(get_serial()))
+    nudge.views['field.updated'].setStringValue_('No')
+
+    # Show the more info url if set
+    if not more_info_url_set:
+        nudge.views['button.moreinfo'].setHidden_(True)
+    if opts.cutoffdate:
+        todays_date = datetime.utcnow()
+        cutoff_date = datetime.strptime(opts.cutoffdate, '%Y-%m-%d-%H:%M')
+        date_diff_seconds = (cutoff_date - todays_date).total_seconds()
+        date_diff_days = int(round(date_diff_seconds / 86400))
+
+        if date_diff_seconds >= 0:
+            nudge.views['field.daysremaining'].setStringValue_(
+                date_diff_days)
+        else:
+            nudge.views['field.daysremaining'].setStringValue_(
+                'Past date!')
+
+        cut_off_warn = bool(date_diff_seconds < int(
+            opts.cutoffdatewarning) * 86400)
+
+        # Setup our timer controller
+        nudge.timer_controller = timerController.alloc().init()
+
+        if date_diff_seconds <= 0:
+            # If the cutoff date is over, get stupidly aggressive
+
+            # Disable all buttons so the user cannot exit out of the
+            # application, and have the manualenrollment button appear
+            nudge.views['button.ok'].setHidden_(True)
+            nudge.views['button.understand'].setHidden_(True)
+
+            # Bring back nudge to the foreground, every 10 seconds
+            timer = float(opts.timerelapsed)
+        elif date_diff_seconds <= 3600:
+            # If the cutoff date is within one hour, get very agressive
+
+            # Disable all buttons so the user cannot exit out of the
+            # application
+            nudge.views['button.ok'].setHidden_(True)
+            nudge.views['button.understand'].setHidden_(True)
+
+            # Bring back nudge to the foreground, every 60 seconds
+            # (1 minute)
+            timer = float(opts.timerfinal)
+        elif date_diff_seconds <= 86400:
+            # If the cutoff date is within 86,400 seconds (24 hours), start
+            # getting more agressive
+
+            # Disable the ok button and require users to press understand
+            # button first
+            nudge.views['button.ok'].setHidden_(True)
+
+            # If the user doesn't close out of nudge, we want it to
+            # reappear - bring back nudge to the foreground, every
+            # 600 seconds (10 minutes)
+            timer = float(opts.timerday1)
+        elif cut_off_warn:
+            # If the cutoff date is within 259,200 seconds (72 hours) or
+            # whatever the admin set, start getting a bit more agressive
+
+            # Disable the ok button and require users to press understand
+            # button first
+            nudge.views['button.ok'].setHidden_(True)
+
+            # If the user doesn't close out of nudge, we want it to
+            # reappear - bring back nudge to the foreground, every
+            # 7,200 seconds (2 hours)
+            timer = float(opts.timerday3)
+        else:
+            # If the cutoff date is over 259,200 seconds (72 hours),
+            # don't be that aggressive
+
+            # Only require the ok button to exit out of nudge
+            nudge.views['button.ok'].setHidden_(False)
+            nudge.views['button.understand'].setHidden_(True)
+
+            # If the user doesn't close out of nudge, we want it to
+            # reappear - bring back nudge to the foreground, every
+            # 14,400 seconds (4 hours)
+            timer = float(opts.timerinital)
+
+        nudge.timer = (
+            Foundation
+            .NSTimer
+            .scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+                timer, nudge.timer_controller, 'activateWindow:', None, True))
+    else:
+        # If you elect not to use a cutoff date, then the UI will only
+        # appear one time per run, and only use the ok button
+
+        # Hide the fields used for the cutoff date
+        nudge.views['field.daysremainingtext'].setHidden_(True)
+        nudge.views['field.daysremaining'].setHidden_(True)
+
+        # Only require the ok button to exit out of nudge
+        nudge.views['button.ok'].setHidden_(False)
+        nudge.views['button.understand'].setHidden_(True)
+
+        timer = float(opts.timerday3)
+        date_diff_seconds = 1000000
+
+    # Use cut off dates, but don't use the timer functionality
+    if opts.notimer:
+        nudge.timer.invalidate()
+        print 'Timer invalidated!'
+    else:
+        print 'Timer is set to %s' % str(timer)
+
+    # Set up our window controller and delegate
+    nudge.hidden = True
+    nudge.run()
+
+
+if __name__ == '__main__':
+    main()
