@@ -88,7 +88,7 @@ This is the URL to open for the Manual Enrollment button.
 ```
 
 ### No timer
-Do not attempt to restore the umad GUI to the front of a user's window.
+Do not attempt to restore the nudge GUI to the front of a user's window.
 
 ```xml
 <string>--notimer</string>
@@ -130,7 +130,7 @@ This is the text right under the main title.
 ```
 
 ### Timer Day 1
-The time, in seconds, to restore the umad GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is one day or less.
 ```xml
@@ -139,7 +139,7 @@ This is when the MDM cutoff is one day or less.
 ```
 
 ### Timer Day 3
-The time, in seconds, to restore the umad GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is three days or less.
 ```xml
@@ -148,7 +148,7 @@ This is when the MDM cutoff is three days or less.
 ```
 
 ### Timer Elapsed
-The time, in seconds, to restore the umad GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff has elapsed.
 ```xml
@@ -157,7 +157,7 @@ This is when the MDM cutoff has elapsed.
 ```
 
 ### Timer Final
-The time, in seconds, to restore the umad GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is one hour or less
 ```xml
@@ -166,7 +166,7 @@ This is when the MDM cutoff is one hour or less
 ```
 
 ### Timer Initial
-The time, in seconds, to restore the umad GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is over three days.
 ```xml
