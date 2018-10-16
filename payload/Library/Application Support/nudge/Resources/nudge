@@ -84,7 +84,7 @@ def get_parsed_options():
                  default='Click on the button below.',
                  help=('Optional: Manual enrollment text.'))
     o.add_option('--minimumosversion',
-                 default='10.13.6',
+                 default='10.13',
                  help=('Required: Minimum OS version.'))
     o.add_option('--moreinfourl',
                  default='https://google.com',
