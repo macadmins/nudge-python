@@ -3,9 +3,9 @@
 ## Important Information
 You most certainly want to customize the following values:
 
-- cutoffdate
-- updatetext
-- moreinfourl
+- `cutoffdate`
+- `updatetext`
+- `moreinfourl`
 
 Also, you will at the very least want to change the `company_logo.png`
 
@@ -13,16 +13,16 @@ Also, you will at the very least want to change the `company_logo.png`
 ![Screenshot Nudge](/images/nudge_ss.png?raw=true)
 
 ## Building this package
-You will need to use [munki-pkg](https://github.com/munki/munki-pkg) to build this package
+You will need to use [munki-pkg](https://github.com/munki/munki-pkg) to build this package.
 
 ## Credits
-This tool would not be possible without [nibbler](https://github.com/pudquick/nibbler), written by [Michael Lynn](https://twitter.com/mikeymikey)
+This tool would not be possible without [nibbler](https://github.com/pudquick/nibbler), written by [Michael Lynn](https://twitter.com/mikeymikey).
 
 ### Notes
 Because of the way git works, nudge will not contain the `Logs` folder required for the postinstall to complete.
 
 In order to create a properly working package, you will need to run the following command:
-`munkipkg --sync /path/to/cloned_repo/nudge`
+`munkipkg --sync /path/to/cloned_repo/nudge`.
 
 ## OS Support
 The following operating system and versions have been tested.
@@ -43,14 +43,14 @@ Cut off date in UTC.
 ```
 
 ### Cut off date warning
-This is the number, in days, of when to start the initial UI warning. When this set of days passes, the user will be required to hit an "I Understand" button, followed by the "Close" button to exit out of the UI.
+This is the number, in days, of when to start the initial UI warning. When this set of days passes, the user will be required to hit the **I Understand** button, followed by the **Close** button to exit out of the UI.
 ```xml
 <string>--cutoffdatewarning</string>
 <string>14</string>
 ```
 
 ### Logo path
-A custom logo path. Alternatively, just replace the included company_logo.png
+A custom logo path. Alternatively, just replace the included `company_logo.png`.
 ```xml
 <string>--logopath</string>
 <string>/Some/Custom/Path/company_logo.png</string>
@@ -58,7 +58,7 @@ A custom logo path. Alternatively, just replace the included company_logo.png
 
 
 ### Header1 text
-This is the first set of text above the update button.
+This is the first set of text above the **Update Machine** button.
 
 ```xml
 <string>--h1text</string>
@@ -66,7 +66,7 @@ This is the first set of text above the update button.
 ```
 
 ### Header2 text
-This is the second set of text above the update button.
+This is the second set of text above the **Update Machine** button.
 
 ```xml
 <string>--h2text</string>
@@ -81,7 +81,7 @@ This is the minimum OS version a machine must be on to not receive this UI.
 ```
 
 ### More info URL
-This is the URL to open for the Manual Enrollment button.
+This is the URL to open when the **Manual Enrollment** button is clicked.
 ```xml
 <string>--moreinfourl</string>
 <string>https://google.com</string>
@@ -159,7 +159,7 @@ This is when the MDM cutoff has elapsed.
 ### Timer Final
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
-This is when the MDM cutoff is one hour or less
+This is when the MDM cutoff is one hour or less.
 ```xml
 <string>--timerfinal</string>
 <string>60</string>
@@ -182,7 +182,7 @@ This is the main, bolded text at the very top.
 ```
 
 ### Update screenshot path
-A custom update screenshot path. Alternatively, just replace the included update_ss.png
+A custom update screenshot path. Alternatively, just replace the included `update_ss.png`.
 ```xml
 <string>--updatesspath</string>
 <string>/Some/Custom/Path/update_ss.png</string>
