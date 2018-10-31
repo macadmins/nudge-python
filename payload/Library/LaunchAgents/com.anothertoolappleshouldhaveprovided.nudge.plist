@@ -4,6 +4,10 @@
 <dict>
 	<key>Label</key>
 	<string>com.anothertoolappleshouldhaveprovided.nudge</string>
+	<key>LimitLoadToSessionType</key>
+	<array>
+		<string>Aqua</string>
+	</array>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Library/Application Support/nudge/Resources/nudge</string>
