@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.anothertoolappleshouldhaveprovided.nudge</string>
+	<string>com.erikng.nudge</string>
 	<key>LimitLoadToSessionType</key>
 	<array>
 		<string>Aqua</string>
