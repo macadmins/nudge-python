@@ -45,7 +45,7 @@ def main(argv):
     os.chmod(nudge_log_path, 0o777)
 
     lapath = os.path.join(target, 'Library', 'LaunchAgents',
-                          'com.anothertoolappleshouldhaveprovided.nudge.plist')
+                          'com.erikng.nudge.plist')
     # Fail the install if the admin forgets to change their paths and they
     # don't exist
     if os.path.isfile(lapath):
@@ -60,7 +60,7 @@ def main(argv):
         current_user_uid = str(currentuseruid[1])
 
         agents = [
-            'com.anothertoolappleshouldhaveprovided.nudge'
+            'com.erikng.nudge'
         ]
 
         # This is a deprecated command, but until Apple kills it, it is going
