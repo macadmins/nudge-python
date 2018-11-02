@@ -1,4 +1,4 @@
-# Nudge
+# Nudge (macadmin's Slack #nudge)
 
 ## Important Information
 You most certainly want to customize the following values:
