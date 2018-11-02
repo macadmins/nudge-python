@@ -1,6 +1,6 @@
 {
     "distribution_style": true,
-    "identifier": "com.anothertoolappleshouldhaveprovided.nudge",
+    "identifier": "com.erikng.nudge",
     "install_location": "/",
     "name": "nudge-${version}.pkg",
     "ownership": "recommended",
