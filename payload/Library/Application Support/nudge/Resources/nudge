@@ -504,7 +504,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 14,400 seconds (4 hours)
-            timer = float(timer_inital)
+            timer = float(timer_initial)
 
         nudge.timer = (
             Foundation
