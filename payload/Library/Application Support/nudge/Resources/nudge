@@ -1,11 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 '''nudge - python wrapper for major OS updates.'''
+import json
 import optparse
 import os
 import platform
+import re
+import shutil
 import subprocess
+import tempfile
 import time
+import urllib
 import webbrowser
 from datetime import datetime
 from distutils.version import LooseVersion
@@ -15,6 +20,7 @@ from AppKit import NSApplication, NSImage
 from SystemConfiguration import SCDynamicStoreCopyConsoleUser
 
 from nibbler import *
+import gurl
 
 
 class timerController(Foundation.NSObject):
@@ -31,12 +37,12 @@ class timerController(Foundation.NSObject):
 
 def button_moreinfo():
     '''Open browser more info button'''
-    webbrowser.open_new_tab(moreinfourl)
+    webbrowser.open_new_tab(MORE_INFO_URL)
 
 
 def button_update():
     '''Start the update process'''
-    cmd = ['/usr/bin/open', pathtoapp]
+    cmd = ['/usr/bin/open', PATH_TO_APP]
     subprocess.Popen(cmd)
 
 
@@ -51,6 +57,55 @@ def button_understand():
     nudge.views['button.understand'].setHidden_(True)
     nudge.views['button.ok'].setHidden_(False)
     nudge.views['button.ok'].setEnabled_(True)
+
+
+def downloadfile(options):
+    '''download file with gurl'''
+    connection = gurl.Gurl.alloc().initWithOptions_(options)
+    percent_complete = -1
+    bytes_received = 0
+    connection.start()
+    try:
+        filename = options['name']
+    except KeyError:
+        print('No \'name\' key defined in json for %s' %
+              pkgregex(options['file']))
+        exit(1)
+
+    try:
+        while not connection.isDone():
+            if connection.destination_path:
+                # only print progress info if we are writing to a file
+                if connection.percentComplete != -1:
+                    if connection.percentComplete != percent_complete:
+                        percent_complete = connection.percentComplete
+                        print('Downloading %s - Percent complete: %s ' % (
+                            filename, percent_complete))
+                elif connection.bytesReceived != bytes_received:
+                    bytes_received = connection.bytesReceived
+                    print('Downloading %s - Bytes received: %s ' % (
+                        filename, bytes_received))
+
+    except (KeyboardInterrupt, SystemExit):
+        # safely kill the connection then fall through
+        connection.cancel()
+    except Exception:  # too general, I know
+        # Let us out! ... Safely! Unexpectedly quit dialogs are annoying ...
+        connection.cancel()
+        # Re-raise the error
+        raise
+
+    if connection.error is not None:
+        print('Error: %s %s ' % (str(connection.error.code()),
+                                 str(connection.error.localizedDescription()))
+             )
+        if connection.SSLerror:
+            print 'SSL error: %s ' % (str(connection.SSLerror))
+    if connection.response is not None:
+        print 'Status: %s ' % (str(connection.status))
+        print 'Headers: %s ' % (str(connection.headers))
+    if connection.redirection != []:
+        print 'Redirection: %s ' % (str(connection.redirection))
 
 
 def get_console_username_info():
@@ -68,74 +123,10 @@ def get_parsed_options():
     '''Return the parsed options and args for this application.'''
     # Options
     usage = '%prog [options]'
-    o = optparse.OptionParser(usage=usage)
-    o.add_option('--cutoffdate',
-                 help=('Required: UTC cutoff date 2018-12-31-00:00.'))
-    o.add_option('--cutoffdatewarning',
-                 default=3,
-                 help=('Optional: Days from cutoff date to start warning.'))
-    o.add_option('--logopath',
-                 default='company_logo.png',
-                 help=('Optional: Path to company logo.'))
-    o.add_option('--h1text',
-                 default='Ready to start the update?',
-                 help=('Optional: Manual enrollment text.'))
-    o.add_option('--h2text',
-                 default='Click on the button below.',
-                 help=('Optional: Manual enrollment text.'))
-    o.add_option('--minimumosversion',
-                 default='10.13',
-                 help=('Required: Minimum OS version.'))
-    o.add_option('--moreinfourl',
-                 default='https://google.com',
-                 help=('Required: More info URL.'))
-    o.add_option('--notimer', default=False,
-                 help=('Optional: Do not use nudge timer functionality.'),
-                 action='store_true')
-    o.add_option('--paragraph1',
-                 default='A fully up-to-date device is required to ensure '
-                 'that IT can your accurately protect your computer.',
-                 help=('Required: Paragraph 1 text.'))
-    o.add_option('--paragraph2',
-                 default='If you do not update your computer, you may lose '
-                 'access to some items necessary for your day-to-day tasks.',
-                 help=('Required: Paragraph 2 text.'))
-    o.add_option('--paragraph3',
-                 default='To begin the update, simply click on the button '
-                 'below and follow the provided steps.',
-                 help=('Required: Paragraph 3 text.'))
-    o.add_option('--pathtoapp',
-                 default='/Applications/Install macOS High Sierra.app',
-                 help=('Required: Path to macOS app.'))
-    o.add_option('--subtitletext',
-                 default='A friendly reminder from your local IT team',
-                 help=('Required: Sub-title text.'))
-    o.add_option('--timerday1',
-                 default=600,
-                 help=('Optional: Time in seconds for 24-hour nudge timer.'))
-    o.add_option('--timerday3',
-                 default=7200,
-                 help=('Optional: Time in seconds for 72-hour nudge timer.'))
-    o.add_option('--timerelapsed',
-                 default=10,
-                 help=('Optional: Time in seconds for elapsed nudge timer.'))
-    o.add_option('--timerfinal',
-                 default=60,
-                 help=('Optional: Time in seconds for 1-hour nudge timer.'))
-    o.add_option('--timerinital',
-                 default=14400,
-                 help=('Optional: Time in seconds for initial nudge timer.'))
-    o.add_option('--titletext',
-                 default='macOS Update',
-                 help=('Optional: Title Text.'))
-    o.add_option('--updatesspath',
-                 default='update_ss.png',
-                 help=('Optional: Path to update screenshot.'))
-    o.add_option('--updatetext',
-                 default='A security update is required on your machine.',
-                 help=('Required: Due date text.'))
-
-    return o.parse_args()
+    options = optparse.OptionParser(usage=usage)
+    options.add_option('--headers', help=('Optional: Auth headers'))
+    options.add_option('--jsonurl', help=('Required: URL to json file.'))
+    return options.parse_args()
 
 
 def get_serial():
@@ -171,12 +162,9 @@ def get_serial():
 def load_nudge_globals():
     '''Try to figure out the path of nudge.nib and load it.'''
     try:
-        # Figure out the local path of nudge
-        global nudge_path
-        nudge_path = os.path.dirname(os.path.realpath(__file__))
         # Setup our global nudge variable to inject into our nib file
         global nudge
-        nudge = Nibbler(os.path.join(nudge_path, 'nudge.nib'))
+        nudge = Nibbler(os.path.join(NUDGE_PATH, 'nudge.nib'))
     except IOError:
         print 'Unable to load nudge nib file!'
         exit(20)
@@ -199,14 +187,183 @@ def nudge_already_loaded():
     return False
 
 
+def pkgregex(pkgpath):
+    '''regular expression for pkg'''
+    try:
+        # capture everything after last / in the pkg filepath
+        pkgname = re.compile(r"[^/]+$").search(pkgpath).group(0)
+        return pkgname
+    except AttributeError, IndexError:
+        return packagepath
+
+
 def main():
     '''Main thread'''
     opts, _ = get_parsed_options()
-    main_nudge_path = '/Library/Application Support/nudge'
 
-    more_info_url_set = bool(opts.moreinfourl != 'https://google.com')
+    # Figure out the local path of nudge
+    global NUDGE_PATH
+    NUDGE_PATH = os.path.dirname(os.path.realpath(__file__))
+    # local json path - if it exists already, let's assume someone is bundling
+    # it with their package. Otherwise check for it and use gurl.
+    json_path = os.path.join(NUDGE_PATH, 'nudge.json')
+    cleanup = True
+    if os.path.isfile(json_path):
+        cleanup = False
+    else:
+        tmp_dir = tempfile.mkdtemp()
+        tmp_json = os.path.join(tmp_dir, 'nudge.json')
+        json_path = tmp_json
+        if opts.jsonurl:
+            json_url = opts.jsonurl
+            # json data for gurl download
+            json_data = {
+                'url': json_url,
+                'file': json_path,
+                'name': 'nudge.json'
+            }
 
-    if get_os_version() >= LooseVersion(opts.minimumosversion):
+            # Grab auth headers if they exist and update the json_data dict.
+            if opts.headers:
+                headers = {'Authorization': opts.headers}
+                json_data.update({'additional_headers': headers})
+
+            # If the file doesn't exist, grab it and wait half a second to save.
+            while not os.path.isfile(json_path):
+                print('Starting download: %s' % (urllib.unquote(
+                    json_data['url']).decode('utf8')))
+                downloadfile(json_data)
+                time.sleep(0.5)
+        else:
+            print 'nudge JSON file not specified!'
+            shutil.rmtree(tmp_dir)
+            exit(1)
+
+    # Load up file to grab all the items.
+    nudge_json = json.loads(open(json_path).read())
+
+    nudge_prefs = nudge_json['preferences']
+
+    if 'button_title_text' in nudge_prefs:
+        button_title_text = nudge_prefs['button_title_text']
+    else:
+        button_title_text = 'Ready to start the update?'
+
+    if 'button_sub_titletext' in nudge_prefs:
+        button_sub_titletext = nudge_prefs['button_sub_titletext']
+    else:
+        button_sub_titletext = 'Click on the button below.'
+
+    if 'cut_off_date' in nudge_prefs:
+        cut_off_date = nudge_prefs['cut_off_date']
+    else:
+        cut_off_date = False
+
+    if 'cut_off_date_warning' in nudge_prefs:
+        cut_off_date_warning = nudge_prefs['cut_off_date_warning']
+    else:
+        cut_off_date_warning = 3
+
+    if 'logo_path' in nudge_prefs:
+        logo_path = nudge_prefs['logo_path']
+    else:
+        logo_path = 'company_logo.png'
+
+    if 'main_subtitle_text' in nudge_prefs:
+        main_subtitle_text = nudge_prefs['main_subtitle_text']
+    else:
+        main_subtitle_text = 'A friendly reminder from your local IT team'
+
+    if 'main_title_text' in nudge_prefs:
+        main_title_text = nudge_prefs['main_title_text']
+    else:
+        main_title_text = 'macOS Update'
+
+    if 'minimum_os_version' in nudge_prefs:
+        minimum_os_version = nudge_prefs['minimum_os_version']
+    else:
+        minimum_os_version = '10.13'
+
+    global MORE_INFO_URL
+    if 'more_info_url' in nudge_prefs:
+        MORE_INFO_URL = nudge_prefs['more_info_url']
+    else:
+        MORE_INFO_URL = False
+
+    if 'no_timer' in nudge_prefs:
+        no_timer = nudge_prefs['no_timer']
+    else:
+        no_timer = False
+
+    if 'paragraph1_text' in nudge_prefs:
+        paragraph1_text = nudge_prefs['paragraph1_text']
+    else:
+        paragraph1_text = 'A fully up-to-date device is required to ensure ' \
+        'that IT can your accurately protect your computer.'
+
+    if 'paragraph2_text' in nudge_prefs:
+        paragraph2_text = nudge_prefs['paragraph2_text']
+    else:
+        paragraph2_text = 'If you do not update your computer, you may lose '\
+        'access to some items necessary for your day-to-day tasks.'
+
+    if 'paragraph3_text' in nudge_prefs:
+        paragraph3_text = nudge_prefs['paragraph3_text']
+    else:
+        paragraph3_text = 'To begin the update, simply click on the button '\
+        'below and follow the provided steps.'
+
+    if 'paragraph_title_text' in nudge_prefs:
+        paragraph_title_text = nudge_prefs['paragraph_title_text']
+    else:
+        paragraph_title_text = 'A security update is required on your machine.'
+
+    global PATH_TO_APP
+    if 'path_to_app' in nudge_prefs:
+        PATH_TO_APP = nudge_prefs['path_to_app']
+    else:
+        PATH_TO_APP = '/Applications/Install macOS High Sierra.app'
+
+    if 'screenshot_path' in nudge_prefs:
+        screenshot_path = nudge_prefs['screenshot_path']
+    else:
+        screenshot_path = 'update_ss.png'
+
+    if 'timer_day_1' in nudge_prefs:
+        timer_day_1 = nudge_prefs['timer_day_1']
+    else:
+        timer_day_1 = 600
+
+    if 'timer_day_3' in nudge_prefs:
+        timer_day_3 = nudge_prefs['timer_day_3']
+    else:
+        timer_day_3 = 7200
+
+    if 'timer_elapsed' in nudge_prefs:
+        timer_elapsed = nudge_prefs['timer_elapsed']
+    else:
+        timer_elapsed = 10
+
+    if 'timer_final' in nudge_prefs:
+        timer_final = nudge_prefs['timer_final']
+    else:
+        timer_final = 60
+
+    if 'timer_initial' in nudge_prefs:
+        timer_initial = nudge_prefs['timer_initial']
+    else:
+        timer_initial = 14400
+
+
+    # TODO - softwarupdate stuff
+    nudge_su_prefs = nudge_json['software_updates']
+
+    # cleanup the tmp stuff now
+    if cleanup:
+        shutil.rmtree(tmp_dir)
+
+
+    if get_os_version() >= LooseVersion(minimum_os_version):
         print 'OS version is higher than minimum threshold: %s' % str(get_os_version())
         exit(0)
     else:
@@ -216,13 +373,7 @@ def main():
         print 'nudge already loaded!'
         exit(0)
 
-    load_nudge_globals()
-    global moreinfourl
-    moreinfourl = opts.moreinfourl
-    global pathtoapp
-    pathtoapp = opts.pathtoapp
-
-    if not os.path.exists(pathtoapp):
+    if not os.path.exists(PATH_TO_APP):
         print 'Update application not found!'
         exit(1)
 
@@ -233,12 +384,14 @@ def main():
     if user_name in (None, u'loginwindow', u'_mbsetupuser'):
         exit(0)
 
+    load_nudge_globals()
+
     # Use the paths defined, or default to pngs in the same local path of
     # nudge
-    for index, path in enumerate([opts.logopath, opts.updatesspath]):
+    for index, path in enumerate([logo_path, screenshot_path]):
         if path in ('company_logo.png', 'update_ss.png'):
             local_png_path = os.path.join(
-                nudge_path, path).replace(' ', '%20')
+                NUDGE_PATH, path).replace(' ', '%20')
         else:
             local_png_path = os.path.join(path).replace(' ', '%20')
         foundation_nsurl_path = Foundation.NSURL.URLWithString_(
@@ -259,27 +412,27 @@ def main():
     nudge.attach(button_understand, 'button.understand')
 
     # Setup the UI fields
-    nudge.views['field.titletext'].setStringValue_(opts.titletext)
-    nudge.views['field.subtitletext'].setStringValue_(opts.subtitletext)
-    nudge.views['field.updatetext'].setStringValue_(opts.updatetext)
-    nudge.views['field.paragraph1'].setStringValue_(opts.paragraph1)
-    nudge.views['field.paragraph2'].setStringValue_(opts.paragraph2)
-    nudge.views['field.paragraph3'].setStringValue_(opts.paragraph3)
-    nudge.views['field.h1text'].setStringValue_(opts.h1text)
-    nudge.views['field.h2text'].setStringValue_(opts.h2text)
+    nudge.views['field.titletext'].setStringValue_(main_title_text)
+    nudge.views['field.subtitletext'].setStringValue_(main_subtitle_text)
+    nudge.views['field.updatetext'].setStringValue_(paragraph_title_text)
+    nudge.views['field.paragraph1'].setStringValue_(paragraph1_text)
+    nudge.views['field.paragraph2'].setStringValue_(paragraph2_text)
+    nudge.views['field.paragraph3'].setStringValue_(paragraph3_text)
+    nudge.views['field.h1text'].setStringValue_(button_title_text)
+    nudge.views['field.h2text'].setStringValue_(button_sub_titletext)
 
     # Dynamically set username and serialnumber
     nudge.views['field.username'].setStringValue_(str(user_name))
     nudge.views['field.serialnumber'].setStringValue_(str(get_serial()))
     nudge.views['field.updated'].setStringValue_('No')
 
-    # Show the more info url if set
-    if not more_info_url_set:
+    # Hide the MORE_INFO_URL if it's not set
+    if not MORE_INFO_URL:
         nudge.views['button.moreinfo'].setHidden_(True)
-    if opts.cutoffdate:
+    if cut_off_date:
         todays_date = datetime.utcnow()
-        cutoff_date = datetime.strptime(opts.cutoffdate, '%Y-%m-%d-%H:%M')
-        date_diff_seconds = (cutoff_date - todays_date).total_seconds()
+        cut_off_date_strp = datetime.strptime(cut_off_date, '%Y-%m-%d-%H:%M')
+        date_diff_seconds = (cut_off_date_strp - todays_date).total_seconds()
         date_diff_days = int(round(date_diff_seconds / 86400))
 
         if date_diff_seconds >= 0:
@@ -290,7 +443,7 @@ def main():
                 'Past date!')
 
         cut_off_warn = bool(date_diff_seconds < int(
-            opts.cutoffdatewarning) * 86400)
+            cut_off_date_warning) * 86400)
 
         # Setup our timer controller
         nudge.timer_controller = timerController.alloc().init()
@@ -304,7 +457,7 @@ def main():
             nudge.views['button.understand'].setHidden_(True)
 
             # Bring back nudge to the foreground, every 10 seconds
-            timer = float(opts.timerelapsed)
+            timer = float(timer_elapsed)
         elif date_diff_seconds <= 3600:
             # If the cutoff date is within one hour, get very agressive
 
@@ -315,7 +468,7 @@ def main():
 
             # Bring back nudge to the foreground, every 60 seconds
             # (1 minute)
-            timer = float(opts.timerfinal)
+            timer = float(timer_final)
         elif date_diff_seconds <= 86400:
             # If the cutoff date is within 86,400 seconds (24 hours), start
             # getting more agressive
@@ -327,7 +480,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 600 seconds (10 minutes)
-            timer = float(opts.timerday1)
+            timer = float(timer_day_1)
         elif cut_off_warn:
             # If the cutoff date is within 259,200 seconds (72 hours) or
             # whatever the admin set, start getting a bit more agressive
@@ -339,7 +492,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 7,200 seconds (2 hours)
-            timer = float(opts.timerday3)
+            timer = float(timer_day_3)
         else:
             # If the cutoff date is over 259,200 seconds (72 hours),
             # don't be that aggressive
@@ -351,7 +504,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 14,400 seconds (4 hours)
-            timer = float(opts.timerinital)
+            timer = float(timer_inital)
 
         nudge.timer = (
             Foundation
@@ -370,11 +523,11 @@ def main():
         nudge.views['button.ok'].setHidden_(False)
         nudge.views['button.understand'].setHidden_(True)
 
-        timer = float(opts.timerday3)
+        timer = float(timer_day_3)
         date_diff_seconds = 1000000
 
     # Use cut off dates, but don't use the timer functionality
-    if opts.notimer:
+    if no_timer:
         nudge.timer.invalidate()
         print 'Timer invalidated!'
     else:
