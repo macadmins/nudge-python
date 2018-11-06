@@ -269,12 +269,8 @@ def get_minimum_minor_update_days(update_minor_days, pending_apple_updates, nudg
     todays_date = datetime.utcnow()
     for item in nudge_su_prefs:
         for update in pending_apple_updates:
-            print 'pref name'
-            print str(item['name'])
-            print 'current pending update key'
-            print str(update['Product Key'])
             if str(item['name']) == str(update['Product Key']):
-                print '{} has a forced date'.format(item)
+                print '{} has a forced date'.format(update['Product Key'])
                 force_date_strp = datetime.strptime(item['force_install_date'], '%Y-%m-%d-%H:%M')
                 date_diff_seconds = (force_date_strp - todays_date).total_seconds()
                 date_diff_days = int(round(date_diff_seconds / 86400))
