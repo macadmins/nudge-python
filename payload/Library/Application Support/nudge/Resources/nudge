@@ -14,7 +14,7 @@ import urllib
 import urllib2
 import urlparse
 import webbrowser
-from datetime import datetime
+from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 import Foundation
 import objc
@@ -478,12 +478,31 @@ def main():
             exit(0)
         else:
             # There are pending updates
-            minor_updates_required = True
             first_seen = pref('first_seen')
             last_seen = pref('last_seen')
             PATH_TO_APP = update_app_path()
 
+            apple_sus_prefs_path = '/Library/Preferences/com.apple.SoftwareUpdate'
 
+            if pref('AutomaticCheckEnabled', apple_sus_prefs_path) and \
+            pref('AutomaticDownload', apple_sus_prefs_path) and \
+            pref('AutomaticallyInstallMacOSUpdates', apple_sus_prefs_path):
+                # Only care about updates needing a restart
+                swupd_output = subprocess.check_output(['/usr/sbin/softwareupdate', '-la'])
+                for line in swupd_output.splitlines():
+                    print line
+                    if 'restart' in line.lower():
+                        minor_updates_required = True
+                        break
+            else:
+                # required preferences for background updates aren't present, notify for all
+                minor_updates_required = True
+
+            if not minor_updates_required:
+                print 'Only updates that can be installed in the background pending.'
+                set_pref('first_seen', None)
+                set_pref('last_seen', None)
+                exit()
             # todo: Work out how long the user has to install it
             # todays_date = datetime.utcnow()
             # first_seen_strp = datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S +0000')
@@ -497,7 +516,7 @@ def main():
                 last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
                 difference = today - last_seen_strp
                 if difference.days < 0:
-                    print 'date is within 24 hours'
+                    print 'Last seen date is within 24 hours'
                     exit()
 
             if not first_seen:
