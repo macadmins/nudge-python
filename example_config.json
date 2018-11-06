@@ -21,6 +21,7 @@
       "timer_elapsed": 10,
       "timer_final": 60,
       "timer_initial": 14400,
+      "random_delay": true,
       "update_minor": true,
       "update_minor_days": 14
     },

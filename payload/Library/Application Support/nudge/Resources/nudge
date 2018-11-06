@@ -5,6 +5,7 @@ import json
 import optparse
 import os
 import platform
+import random
 import re
 import shutil
 import subprocess
@@ -458,6 +459,8 @@ def main():
     else:
         timer_initial = 14400
 
+    random_delay = nudge_prefs.get('random_delay', True)
+
     nudge_su_prefs = nudge_json.get('software_updates', [])
 
     update_minor = nudge_prefs.get('update_minor', False)
@@ -467,6 +470,11 @@ def main():
     # cleanup the tmp stuff now
     if cleanup:
         shutil.rmtree(tmp_dir)
+
+    if random_delay:
+        delay = random.randint(1,1200)
+        print 'Delaying run for {} seconds.'.format(delay)
+        time.sleep(delay)
 
     if get_os_version() >= LooseVersion(minimum_os_version) and not update_minor:
         print 'OS version is higher than minimum threshold: %s' % str(get_os_version())
