@@ -11,12 +11,17 @@ import subprocess
 import tempfile
 import time
 import urllib
+import urllib2
+import urlparse
 import webbrowser
 from datetime import datetime
 from distutils.version import LooseVersion
 import Foundation
 import objc
 from AppKit import NSApplication, NSImage
+from CoreFoundation import CFPreferencesCopyAppValue
+from CoreFoundation import CFPreferencesSetAppValue
+from CoreFoundation import CFPreferencesAppSynchronize
 from SystemConfiguration import SCDynamicStoreCopyConsoleUser
 
 from nibbler import *
@@ -187,6 +192,63 @@ def nudge_already_loaded():
     return False
 
 
+def pref(pref_name, domain='com.erikng.nudge'):
+    """Returns a preference from the specified domain.
+
+    Uses CoreFoundation.
+
+    Args:
+      pref_name: str preference name to get.
+    """
+    pref_value = CFPreferencesCopyAppValue(
+        pref_name, domain)
+    if isinstance(pref_value, Foundation.NSDate):
+        # convert NSDate/CFDates to strings
+        pref_value = str(pref_value)
+    return pref_value
+
+
+def set_pref(pref_name, value, domain='com.erikng.nudge'):
+    """Sets a value in Preferences.
+    Uses CoreFoundation.
+    Args:
+       pref_name: str preference name to set.
+       value: value to set it to.
+    """
+    CFPreferencesSetAppValue(pref_name, value, domain)
+    CFPreferencesAppSynchronize(domain)
+
+
+def download_apple_updates():
+    '''Download everything Softwareupdate has to offer'''
+
+    cmd = [
+        '/usr/sbin/softwareupdate',
+        '-da',
+        '--force'
+    ]
+
+    try:
+        return subprocess.check_output(cmd)
+    except subprocess.CalledProcessError:
+        return None
+
+
+def pending_apple_updates():
+    '''Pending apple updates
+    Returns a dict of pending updates'''
+
+    return pref('RecommendedUpdates', 'com.apple.SoftwareUpdate')
+
+
+def update_app_path():
+    software_updates_prefpane = '/System/Library/PreferencePanes/SoftwareUpdate.prefPane'
+    if os.path.exists(software_updates_prefpane):
+        return 'file://{}'.format(software_updates_prefpane)
+    else:
+        return 'macappstore://updates'
+
+
 def pkgregex(pkgpath):
     '''regular expression for pkg'''
     try:
@@ -194,7 +256,7 @@ def pkgregex(pkgpath):
         pkgname = re.compile(r"[^/]+$").search(pkgpath).group(0)
         return pkgname
     except AttributeError, IndexError:
-        return packagepath
+        return pkgpath
 
 
 def main():
@@ -214,6 +276,7 @@ def main():
         tmp_dir = tempfile.mkdtemp()
         tmp_json = os.path.join(tmp_dir, 'nudge.json')
         json_path = tmp_json
+        json_raw = None
         if opts.jsonurl:
             json_url = opts.jsonurl
             # json data for gurl download
@@ -228,19 +291,36 @@ def main():
                 headers = {'Authorization': opts.headers}
                 json_data.update({'additional_headers': headers})
 
-            # If the file doesn't exist, grab it and wait half a second to save.
-            while not os.path.isfile(json_path):
-                print('Starting download: %s' % (urllib.unquote(
-                    json_data['url']).decode('utf8')))
-                downloadfile(json_data)
-                time.sleep(0.5)
+            url_parse = urlparse.urlparse(json_url)
+            if url_parse.scheme == 'file':
+                # File resources should be handled natively
+                try:
+                    json_raw = urllib2.urlopen(json_url).read()
+                except urllib2.URLError, err:
+                    print(err)
+                    shutil.rmtree(tmp_dir)
+                    exit(1)
+                except urllib2.HTTPError, err:
+                    print(err)
+                    shutil.rmtree(tmp_dir)
+                    exit(1)
+            else:
+                # If the file doesn't exist, grab it and wait half a second to save.
+                while not os.path.isfile(json_path):
+                    print('Starting download: %s' % (urllib.unquote(
+                        json_data['url']).decode('utf8')))
+                    downloadfile(json_data)
+                    time.sleep(0.5)
         else:
             print 'nudge JSON file not specified!'
             shutil.rmtree(tmp_dir)
             exit(1)
 
     # Load up file to grab all the items.
-    nudge_json = json.loads(open(json_path).read())
+    if json_raw:
+        nudge_json = json.loads(json_raw)
+    else:
+        nudge_json = json.loads(open(json_path).read())
 
     nudge_prefs = nudge_json['preferences']
 
@@ -354,16 +434,20 @@ def main():
     else:
         timer_initial = 14400
 
-
     # TODO - softwarupdate stuff
-    nudge_su_prefs = nudge_json['software_updates']
+    if 'software_updates' in nudge_json:
+        nudge_su_prefs = nudge_json['software_updates']
+
+    update_minor = nudge_prefs.get('update_minor', False)
+
+    update_minor_days = nudge_prefs.get('update_minor_days', 30)
 
     # cleanup the tmp stuff now
     if cleanup:
         shutil.rmtree(tmp_dir)
 
 
-    if get_os_version() >= LooseVersion(minimum_os_version):
+    if get_os_version() >= LooseVersion(minimum_os_version) and not update_minor:
         print 'OS version is higher than minimum threshold: %s' % str(get_os_version())
         exit(0)
     else:
@@ -373,9 +457,59 @@ def main():
         print 'nudge already loaded!'
         exit(0)
 
-    if not os.path.exists(PATH_TO_APP):
+    if not os.path.exists(PATH_TO_APP) and not update_minor:
         print 'Update application not found!'
         exit(1)
+
+    minor_updates_required = False
+    if update_minor:
+        swupd_output = download_apple_updates()
+        if not swupd_output:
+            print 'Could not run softwareupdate'
+            # Exit 0 as we might be offline
+            # TODO: Check if we're offline to exit with the
+            # appropriate code
+            exit(0)
+
+        if pending_apple_updates() == [] or pending_apple_updates() is None:
+            print 'No Software updates to install'
+            set_pref('first_seen', None)
+            set_pref('last_seen', None)
+            exit(0)
+        else:
+            # There are pending updates
+            minor_updates_required = True
+            first_seen = pref('first_seen')
+            last_seen = pref('last_seen')
+            PATH_TO_APP = update_app_path()
+
+
+            # todo: Work out how long the user has to install it
+            # todays_date = datetime.utcnow()
+            # first_seen_strp = datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S +0000')
+            # date_diff_seconds = (first_seen_strp - todays_date).total_seconds()
+            # date_diff_days = int(round(date_diff_seconds / 86400))
+            # print date_diff_days
+
+            # Have we opened in the last 24 hours?
+            if first_seen and last_seen:
+                today = datetime.utcnow()
+                last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
+                difference = today - last_seen_strp
+                if difference.days < 0:
+                    print 'date is within 24 hours'
+                    exit()
+
+            if not first_seen:
+                set_pref('first_seen', datetime.utcnow())
+                first_seen = pref('first_seen')
+
+            if not last_seen:
+                # we've not nagged recently
+                set_pref('last_seen', datetime.utcnow())
+                last_seen = pref('last_seen')
+
+
 
     # Get the current username
     user_name, current_user_uid, _ = get_console_username_info()
@@ -429,11 +563,15 @@ def main():
     # Hide the MORE_INFO_URL if it's not set
     if not MORE_INFO_URL:
         nudge.views['button.moreinfo'].setHidden_(True)
-    if cut_off_date:
+    if cut_off_date or (minor_updates_required and update_minor_days > 0):
         todays_date = datetime.utcnow()
-        cut_off_date_strp = datetime.strptime(cut_off_date, '%Y-%m-%d-%H:%M')
-        date_diff_seconds = (cut_off_date_strp - todays_date).total_seconds()
-        date_diff_days = int(round(date_diff_seconds / 86400))
+        if minor_updates_required and update_minor_days > 0:
+            date_diff_days = ((todays_date + timedelta(days=update_minor_days)) - todays_date).days
+            date_diff_seconds = date_diff_days * 86400
+        else:
+            cut_off_date_strp = datetime.strptime(cut_off_date, '%Y-%m-%d-%H:%M')
+            date_diff_seconds = (cut_off_date_strp - todays_date).total_seconds()
+            date_diff_days = int(round(date_diff_seconds / 86400))
 
         if date_diff_seconds >= 0:
             nudge.views['field.daysremaining'].setStringValue_(
@@ -504,7 +642,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 14,400 seconds (4 hours)
-            timer = float(timer_inital)
+            timer = float(timer_initial)
 
         nudge.timer = (
             Foundation
