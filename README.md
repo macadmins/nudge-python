@@ -32,165 +32,174 @@ The following operating system and versions have been tested.
 - 10.13.0 10.13.3, 10.13.6
 - 10.14.0
 
-## Options
-Essentially every component of the UI is customizable, all through the LaunchAgent.
+## Configuration File
+Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.
+
+### Web-accessible config file
+To define a configuration file that is hosted on a central web server, use the `jsonurl` script parameter.  
+```bash
+--jsonurl=https://fake.domain.com/path/to/config.json
+```
+
+### Local config file
+If you prefer to deploy the configuration file to each client, it needs to be placed in the `Resources` directory and named `nudge.json`.
+
+## Preferences
+A description of each preference is listed below.
 
 ### Cutoff date
 Cut off date in UTC.
-```xml
-<string>--cutoffdate</string>
-<string>2018-12-31-00:00</string>
+```json
+"cut_off_date": "2018-12-31-00:00"
 ```
 
 ### Cut off date warning
 This is the number, in days, of when to start the initial UI warning. When this set of days passes, the user will be required to hit the **I Understand** button, followed by the **Close** button to exit out of the UI.
-```xml
-<string>--cutoffdatewarning</string>
-<string>14</string>
+```json
+"cut_off_date_warning": "14"
 ```
 
 ### Logo path
 A custom logo path. Alternatively, just replace the included `company_logo.png`.
-```xml
-<string>--logopath</string>
-<string>/Some/Custom/Path/company_logo.png</string>
+```json
+"logo_path": "/Some/Custom/Path/company_logo.png"
 ```
 
-
-### Header1 text
+### Button Title text
 This is the first set of text above the **Update Machine** button.
 
-```xml
-<string>--h1text</string>
-<string>Ready to start the update?</string>
+```json
+"button_title_text": "Ready to start the update?"
 ```
 
-### Header2 text
+### Button Sub-title text
 This is the second set of text above the **Update Machine** button.
 
-```xml
-<string>--h2text</string>
-<string>Click on the button below.</string>
+```json
+"button_sub_titletext": "Click on the button below."
 ```
 
 ### Minimum OS Version
 This is the minimum OS version a machine must be on to not receive this UI.
-```xml
-<string>--minimumosversion</string>
-<string>10.13.6</string>
+```json
+"minimum_os_version": "10.13.6"
 ```
 
 ### More info URL
 This is the URL to open when the **Manual Enrollment** button is clicked.
-```xml
-<string>--moreinfourl</string>
-<string>https://google.com</string>
+```json
+"more_info_url": "https://google.com"
+```
+
+### Main Title text
+This is the main, bolded text at the very top.
+```json
+"main_title_text": "macOS Update"
+```
+
+### Main Sub-title text
+This is the text right under the main title.
+```json
+"main_subtitle_text": "A friendly reminder from your local IT team"
+```
+
+### Paragraph Title text
+This is the bolded portion of the UI towards the top.
+```json
+"paragraph_title_text": "A security update is required on your machine."
+```
+
+### Paragraph 1 text
+This is the text for the first paragraph.
+```json
+"paragraph1_text": "A fully up-to-date device is required to ensure that IT can your accurately protect your computer."
+```
+
+### Paragraph 2 text
+This is the text for the second paragraph.
+```json
+"paragraph2_text": "If you do not update your computer, you may lose access to some items necessary for your day-to-day tasks."
+```
+
+### Paragraph 3 text
+This is the text for the third paragraph.
+```json
+"paragraph3_text": "To begin the update, simply click on the button below and follow the provided steps."
+```
+
+### Path to app
+This is the path to the macOS installer application.
+```json
+"path_to_app": "/Applications/Install macOS High Sierra.app"
 ```
 
 ### No timer
 Do not attempt to restore the nudge GUI to the front of a user's window.
 
-```xml
-<string>--notimer</string>
-```
-
-### Paragraph 1 text
-This is the text for the first paragraph.
-```xml
-<string>--paragraph1</string>
-<string>A fully up-to-date device is required to ensure that IT can your accurately protect your computer.</string>
-```
-
-### Paragraph 2 text
-This is the text for the second paragraph.
-```xml
-<string>--paragraph2</string>
-<string>If you do not update your computer, you may lose access to some items necessary for your day-to-day tasks.</string>
-```
-
-### Paragraph 3 text
-This is the text for the third paragraph.
-```xml
-<string>--paragraph3</string>
-<string>To begin the update, simply click on the button below and follow the provided steps.</string>
-```
-
-### Path to app
-This is the path to the macOS installer application.
-```xml
-<string>--pathtoapp</string>
-<string>/Applications/Install macOS High Sierra.app</string>
-```
-
-### Sub-title text
-This is the text right under the main title.
-```xml
-<string>--subtitletext</string>
-<string>A friendly reminder from your local IT team</string>
+```json
+"no_timer": false
 ```
 
 ### Timer Day 1
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is one day or less.
-```xml
-<string>--timerday1</string>
-<string>600</string>
+```json
+"timer_day_1": 600
 ```
 
 ### Timer Day 3
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is three days or less.
-```xml
-<string>--timerday3</string>
-<string>7200</string>
+```json
+"timer_day_3": 7200
 ```
 
 ### Timer Elapsed
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff has elapsed.
-```xml
-<string>--timerelapsed</string>
-<string>10</string>
+```json
+"timer_elapsed": 10
 ```
 
 ### Timer Final
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is one hour or less.
-```xml
-<string>--timerfinal</string>
-<string>60</string>
+```json
+"timer_final": 60
 ```
 
 ### Timer Initial
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
 
 This is when the MDM cutoff is over three days.
-```xml
-<string>--timerinital</string>
-<string>14400</string>
-```
-
-### Title text
-This is the main, bolded text at the very top.
-```xml
-<string>--titletext</string>
-<string>MDM Enrollment</string>
+```json
+"timer_initial": 14400
 ```
 
 ### Update screenshot path
 A custom update screenshot path. Alternatively, just replace the included `update_ss.png`.
-```xml
-<string>--updatesspath</string>
-<string>/Some/Custom/Path/update_ss.png</string>
+```json
+"screenshot_path": "/Some/Custom/Path/update_ss.png"
 ```
 
-### Update text
-This is the bolded portion of the UI towards the top.
-```xml
-<string>--updatetext</string>
-<string>A security update is required on your machine.</string>
+### Random Delay
+Randomize the UI popup by up to 20 minutes.
+```json
+"random_delay": true
+```
+
+### Update Minor
+Perform Apple Software Updates.
+```json
+"update_minor": true
+```
+
+### Update Minor Days
+Grace period before UI pops up to prompt for minor updates.
+```json
+"update_minor_days": 14
 ```
