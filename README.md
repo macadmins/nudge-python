@@ -56,7 +56,7 @@ Cut off date in UTC.
 ### Cut off date warning
 This is the number, in days, of when to start the initial UI warning. When this set of days passes, the user will be required to hit the **I Understand** button, followed by the **Close** button to exit out of the UI.
 ```json
-"cut_off_date_warning": "14"
+"cut_off_date_warning": 14
 ```
 
 ### Logo path
@@ -86,7 +86,7 @@ This is the minimum OS version a machine must be on to not receive this UI.
 ```
 
 ### More info URL
-This is the URL to open when the **Manual Enrollment** button is clicked.
+This is the URL to open when the **More Info** button is clicked.
 ```json
 "more_info_url": "https://google.com"
 ```
