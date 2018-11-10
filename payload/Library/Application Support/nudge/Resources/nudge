@@ -293,6 +293,7 @@ def main():
     cleanup = True
     if os.path.isfile(json_path):
         cleanup = False
+        json_raw = open(json_path).read()
     else:
         tmp_dir = tempfile.mkdtemp()
         tmp_json = os.path.join(tmp_dir, 'nudge.json')
