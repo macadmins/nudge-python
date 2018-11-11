@@ -17,7 +17,7 @@
 	<true/>
 	<key>StandardOutPath</key>
 	<string>/Library/Application Support/nudge/Logs/nudge.log</string>
-	<key>StandardOutPath</key>
+	<key>StandardErrorPath</key>
 	<string>/Library/Application Support/nudge/Logs/nudge.log</string>
 	<key>StartCalendarInterval</key>
 	<array>
