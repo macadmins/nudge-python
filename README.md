@@ -35,14 +35,17 @@ The following operating system and versions have been tested.
 ## Configuration File
 Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.
 
-### Web-accessible config file
-To define a configuration file that is hosted on a central web server, use the `jsonurl` script parameter.  
+### Defined config file
+To define a configuration file, use the `jsonurl` script parameter.  
 ```bash
 --jsonurl=https://fake.domain.com/path/to/config.json
 ```
+```bash
+--jsonurl=file:///path/to/local/config.json
+```
 
-### Local config file
-If you prefer to deploy the configuration file to each client, it needs to be placed in the `Resources` directory and named `nudge.json`.
+### Default config file
+If you prefer to deploy the configuration file to each client, it needs to be placed in the `Resources` directory and named `nudge.json`. If this file exists, `jsonurl` does not need to be set.
 
 ## Preferences
 A description of each preference is listed below.
