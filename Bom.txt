@@ -13,4 +13,4 @@
 ./Library/Application Support/nudge/Resources/nudge.nib/keyedobjects.nib	100755	0/0	17325	2851127878
 ./Library/Application Support/nudge/Resources/update_ss.png	100755	0/0	270985	1514275893
 ./Library/LaunchAgents	40755	0/0
-./Library/LaunchAgents/com.anothertoolappleshouldhaveprovided.nudge.plist	100755	0/0	2988	3793481515
+./Library/LaunchAgents/com.erikng.nudge.plist	100755	0/0	2988	3793481515
