@@ -124,6 +124,11 @@ def get_os_version():
     '''Return OS version.'''
     return LooseVersion(platform.mac_ver()[0])
 
+def get_os_version_major():
+    '''Return major OS version.'''
+    full_os = platform.mac_ver()[0]
+    return LooseVersion(full_os.rsplit('.', 1)[0])
+
 
 def get_parsed_options():
     '''Return the parsed options and args for this application.'''
@@ -284,9 +289,25 @@ def main():
     '''Main thread'''
     opts, _ = get_parsed_options()
 
-    # Figure out the local path of nudge
+    if nudge_already_loaded():
+        print 'nudge already loaded!'
+        exit(0)
+
+    # Get the current username
+    user_name, current_user_uid, _ = get_console_username_info()
+
+    # Bail if we are not in a user session.
+    if user_name in (None, u'loginwindow', u'_mbsetupuser'):
+        exit(0)
+
+    # Setup our globals to use across nibbler and nibbler functions
     global NUDGE_PATH
+    global MORE_INFO_URL
+    global PATH_TO_APP
+
+    # Figure out the local path of nudge
     NUDGE_PATH = os.path.dirname(os.path.realpath(__file__))
+
     # local json path - if it exists already, let's assume someone is bundling
     # it with their package. Otherwise check for it and use gurl.
     json_path = os.path.join(NUDGE_PATH, 'nudge.json')
@@ -344,226 +365,147 @@ def main():
     else:
         nudge_json = json.loads(open(json_path).read())
 
+    # Load nudge preferences
     nudge_prefs = nudge_json['preferences']
-
-    if 'button_title_text' in nudge_prefs:
-        button_title_text = nudge_prefs['button_title_text']
-    else:
-        button_title_text = 'Ready to start the update?'
-
-    if 'button_sub_titletext' in nudge_prefs:
-        button_sub_titletext = nudge_prefs['button_sub_titletext']
-    else:
-        button_sub_titletext = 'Click on the button below.'
-
-    if 'cut_off_date' in nudge_prefs:
-        cut_off_date = nudge_prefs['cut_off_date']
-    else:
-        cut_off_date = False
-
-    if 'cut_off_date_warning' in nudge_prefs:
-        cut_off_date_warning = nudge_prefs['cut_off_date_warning']
-    else:
-        cut_off_date_warning = 3
-
-    if 'logo_path' in nudge_prefs:
-        logo_path = nudge_prefs['logo_path']
-    else:
-        logo_path = 'company_logo.png'
-
-    if 'main_subtitle_text' in nudge_prefs:
-        main_subtitle_text = nudge_prefs['main_subtitle_text']
-    else:
-        main_subtitle_text = 'A friendly reminder from your local IT team'
-
-    if 'main_title_text' in nudge_prefs:
-        main_title_text = nudge_prefs['main_title_text']
-    else:
-        main_title_text = 'macOS Update'
-
-    if 'minimum_os_version' in nudge_prefs:
-        minimum_os_version = nudge_prefs['minimum_os_version']
-    else:
-        minimum_os_version = '10.13'
-
-    global MORE_INFO_URL
-    if 'more_info_url' in nudge_prefs:
-        MORE_INFO_URL = nudge_prefs['more_info_url']
-    else:
-        MORE_INFO_URL = False
-
-    if 'no_timer' in nudge_prefs:
-        no_timer = nudge_prefs['no_timer']
-    else:
-        no_timer = False
-
-    if 'paragraph1_text' in nudge_prefs:
-        paragraph1_text = nudge_prefs['paragraph1_text']
-    else:
-        paragraph1_text = 'A fully up-to-date device is required to ensure ' \
-        'that IT can your accurately protect your computer.'
-
-    if 'paragraph2_text' in nudge_prefs:
-        paragraph2_text = nudge_prefs['paragraph2_text']
-    else:
-        paragraph2_text = 'If you do not update your computer, you may lose '\
-        'access to some items necessary for your day-to-day tasks.'
-
-    if 'paragraph3_text' in nudge_prefs:
-        paragraph3_text = nudge_prefs['paragraph3_text']
-    else:
-        paragraph3_text = 'To begin the update, simply click on the button '\
-        'below and follow the provided steps.'
-
-    if 'paragraph_title_text' in nudge_prefs:
-        paragraph_title_text = nudge_prefs['paragraph_title_text']
-    else:
-        paragraph_title_text = 'A security update is required on your machine.'
-
-    global PATH_TO_APP
-    if 'path_to_app' in nudge_prefs:
-        PATH_TO_APP = nudge_prefs['path_to_app']
-    else:
-        PATH_TO_APP = '/Applications/Install macOS High Sierra.app'
-
-    if 'screenshot_path' in nudge_prefs:
-        screenshot_path = nudge_prefs['screenshot_path']
-    else:
-        screenshot_path = 'update_ss.png'
-
-    if 'timer_day_1' in nudge_prefs:
-        timer_day_1 = nudge_prefs['timer_day_1']
-    else:
-        timer_day_1 = 600
-
-    if 'timer_day_3' in nudge_prefs:
-        timer_day_3 = nudge_prefs['timer_day_3']
-    else:
-        timer_day_3 = 7200
-
-    if 'timer_elapsed' in nudge_prefs:
-        timer_elapsed = nudge_prefs['timer_elapsed']
-    else:
-        timer_elapsed = 10
-
-    if 'timer_final' in nudge_prefs:
-        timer_final = nudge_prefs['timer_final']
-    else:
-        timer_final = 60
-
-    if 'timer_initial' in nudge_prefs:
-        timer_initial = nudge_prefs['timer_initial']
-    else:
-        timer_initial = 14400
-
-    random_delay = nudge_prefs.get('random_delay', True)
-
+    # Setup nudge preferences and all defaults if not set
+    button_title_text = nudge_prefs.get('button_title_text',
+        'Ready to start the update?')
+    button_sub_titletext = nudge_prefs.get('button_sub_titletext',
+        'Click on the button below.')
+    cut_off_date = nudge_prefs.get('cut_off_date', False)
+    cut_off_date_warning = nudge_prefs.get('cut_off_date_warning', 3)
+    days_between_notifications = nudge_prefs.get('days_between_notifications',
+        0)
+    logo_path = nudge_prefs.get('logo_path', 'company_logo.png')
+    main_subtitle_text = nudge_prefs.get('main_subtitle_text',
+        'A friendly reminder from your local IT team')
+    main_title_text = nudge_prefs.get('main_title_text', 'macOS Update')
+    minimum_os_version = nudge_prefs.get('minimum_os_version', '10.14.0')
+    minimum_os_version_major = minimum_os_version.rsplit('.', 1)[0]
+    MORE_INFO_URL = nudge_prefs.get('more_info_url', False)
+    no_timer = nudge_prefs.get('no_timer', False)
+    paragraph1_text = nudge_prefs.get('paragraph1_text',
+        'A fully up-to-date device is required to ensure that IT can your accurately protect your computer.')
+    paragraph2_text = nudge_prefs.get('paragraph2_text',
+        'If you do not update your computer, you may lose access to some items necessary for your day-to-day tasks.')
+    paragraph3_text = nudge_prefs.get('paragraph3_text',
+        'To begin the update, simply click on the button below and follow the provided steps.')
+    paragraph_title_text = nudge_prefs.get('paragraph_title_text',
+        'A security update is required on your machine.')
+    PATH_TO_APP = nudge_prefs.get('path_to_app',
+        '/Applications/Install macOS Mojave.app')
+    screenshot_path = nudge_prefs.get('screenshot_path', 'update_ss.png')
+    timer_day_1 = nudge_prefs.get('timer_day_1', 600)
+    timer_day_3 = nudge_prefs.get('timer_day_3', 7200)
+    timer_elapsed = nudge_prefs.get('timer_elapsed', 10)
+    timer_final = nudge_prefs.get('timer_final', 60)
+    timer_initial = nudge_prefs.get('timer_initial', 14400)
+    random_delay = nudge_prefs.get('random_delay', False)
     nudge_su_prefs = nudge_json.get('software_updates', [])
-
     update_minor = nudge_prefs.get('update_minor', False)
-
     update_minor_days = nudge_prefs.get('update_minor_days', 30)
+
+    # Start information
+    print 'Target OS version: %s ' % minimum_os_version
 
     # cleanup the tmp stuff now
     if cleanup:
+        'Cleaning up temporary files...'
         shutil.rmtree(tmp_dir)
 
     if random_delay:
         delay = random.randint(1,1200)
-        print 'Delaying run for {} seconds.'.format(delay)
+        print 'Delaying run for {} seconds...'.format(delay)
         time.sleep(delay)
 
-    if get_os_version() >= LooseVersion(minimum_os_version) and not update_minor:
-        print 'OS version is higher than minimum threshold: %s' % str(get_os_version())
+    if get_os_version() >= LooseVersion(minimum_os_version):
+        print 'OS version is higher or equal to the minimum threshold: %s' % str(get_os_version())
+        exit(0)
+    elif get_os_version_major() >= LooseVersion(minimum_os_version_major) and not update_minor:
+        print 'OS major version is higher or equal to the minimum threshold and minor updates not enabled: %s ' % str(get_os_version())
         exit(0)
     else:
-        if not update_minor:
-            print 'OS version is below the minimum threshold: %s' % str(get_os_version())
-        else:
-            print 'Checking for minor updates.'
-
-    if nudge_already_loaded():
-        print 'nudge already loaded!'
-        exit(0)
-
-    if not os.path.exists(PATH_TO_APP) and not update_minor:
-        print 'Update application not found!'
-        exit(1)
+        print 'OS version is below the minimum threshold: %s' % str(get_os_version())
 
     minor_updates_required = False
-    if update_minor:
-        swupd_output = download_apple_updates()
-        if not swupd_output:
-            print 'Could not run softwareupdate'
-            # Exit 0 as we might be offline
-            # TODO: Check if we're offline to exit with the
-            # appropriate code
-            exit(0)
 
-        if pending_apple_updates() == [] or pending_apple_updates() is None:
-            print 'No Software updates to install'
-            set_pref('first_seen', None)
-            set_pref('last_seen', None)
-            exit(0)
-        else:
-            # There are pending updates
-            first_seen = pref('first_seen')
-            last_seen = pref('last_seen')
-            PATH_TO_APP = update_app_path()
+    # Start main logic on major and minor upgrades
+    if LooseVersion(minimum_os_version_major) > get_os_version_major():
+        # This is a major upgrade now and needs the app. We shouldn't
+        # perform minor updates.
+        if not os.path.exists(PATH_TO_APP):
+            print 'Update application not found! Exiting...'
+            exit(1)
+    else:
+        # do minor version stuff
+        if update_minor:
+            print 'Checking for minor updates.'
+            swupd_output = download_apple_updates()
+            if not swupd_output:
+                print 'Could not run softwareupdate'
+                # Exit 0 as we might be offline
+                # TODO: Check if we're offline to exit with the
+                # appropriate code
+                exit(0)
 
-            apple_sus_prefs_path = '/Library/Preferences/com.apple.SoftwareUpdate'
-
-            if pref('AutomaticCheckEnabled', apple_sus_prefs_path) and \
-            pref('AutomaticDownload', apple_sus_prefs_path) and \
-            pref('AutomaticallyInstallMacOSUpdates', apple_sus_prefs_path):
-                # Only care about updates needing a restart
-                swupd_output = subprocess.check_output(['/usr/sbin/softwareupdate', '-la'])
-                for line in swupd_output.splitlines():
-                    print line
-                    if 'restart' in line.lower():
-                        minor_updates_required = True
-                        break
-            else:
-                # required preferences for background updates aren't present, notify for all
-                minor_updates_required = True
-
-            if not minor_updates_required:
-                print 'Only updates that can be installed in the background pending.'
+            if pending_apple_updates() == [] or pending_apple_updates() is None:
+                print 'No Software updates to install'
                 set_pref('first_seen', None)
                 set_pref('last_seen', None)
-                exit()
-            # todo: Work out how long the user has to install it
-            # todays_date = datetime.utcnow()
-            # first_seen_strp = datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S +0000')
-            # date_diff_seconds = (first_seen_strp - todays_date).total_seconds()
-            # date_diff_days = int(round(date_diff_seconds / 86400))
-            # print date_diff_days
-
-            # Have we opened in the last 24 hours?
-            if first_seen and last_seen:
-                today = datetime.utcnow()
-                last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
-                difference = today - last_seen_strp
-                if difference.days < 0:
-                    print 'Last seen date is within 24 hours'
-                    exit()
-
-            if not first_seen:
-                set_pref('first_seen', datetime.utcnow())
+                exit(0)
+            else:
+                # There are pending updates
                 first_seen = pref('first_seen')
-
-            if not last_seen:
-                # we've not nagged recently
-                set_pref('last_seen', datetime.utcnow())
                 last_seen = pref('last_seen')
+                PATH_TO_APP = update_app_path()
 
+                apple_sus_prefs_path = '/Library/Preferences/com.apple.SoftwareUpdate'
 
-    # Get the current username
-    user_name, current_user_uid, _ = get_console_username_info()
+                if pref('AutomaticCheckEnabled', apple_sus_prefs_path) and \
+                pref('AutomaticDownload', apple_sus_prefs_path) and \
+                pref('AutomaticallyInstallMacOSUpdates', apple_sus_prefs_path):
+                    # Only care about updates needing a restart
+                    swupd_output = subprocess.check_output(['/usr/sbin/softwareupdate', '-la'])
+                    for line in swupd_output.splitlines():
+                        print line
+                        if 'restart' in line.lower():
+                            minor_updates_required = True
+                            break
+                else:
+                    # required preferences for background updates aren't present, notify for all
+                    minor_updates_required = True
 
-    # Bail if we are not in a user session.
-    if user_name in (None, u'loginwindow', u'_mbsetupuser'):
-        exit(0)
+                if not minor_updates_required:
+                    print 'Only updates that can be installed in the background pending.'
+                    set_pref('first_seen', None)
+                    set_pref('last_seen', None)
+                    exit()
+                # todo: Work out how long the user has to install it
+                # todays_date = datetime.utcnow()
+                # first_seen_strp = datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S +0000')
+                # date_diff_seconds = (first_seen_strp - todays_date).total_seconds()
+                # date_diff_days = int(round(date_diff_seconds / 86400))
+                # print date_diff_days
+
+                # Allow admin to not show nudge all the time
+                if days_between_notifications > 0:
+                    if first_seen and last_seen:
+                        today = datetime.utcnow()
+                        last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
+                        difference = today - last_seen_strp
+                        print difference.days
+                        if difference.days < days_between_notifications:
+                            print 'Last seen date is within notification threshold: %s ' % str(days_between_notifications)
+                            exit(0)
+
+                if not first_seen:
+                    set_pref('first_seen', datetime.utcnow())
+                    first_seen = pref('first_seen')
+
+                if not last_seen:
+                    # we've not nagged recently
+                    set_pref('last_seen', datetime.utcnow())
+                    last_seen = pref('last_seen')
 
     load_nudge_globals()
 
