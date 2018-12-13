@@ -418,6 +418,11 @@ def main():
         print 'Delaying run for {} seconds...'.format(delay)
         time.sleep(delay)
 
+    # If the admin put '10.14' and not '10.14.0' the major version will be '10'
+    # so make sure this error doesn't happen and the comparison doesn't fail.
+    if '.' not in minimum_os_version_major:
+        minimum_os_version_major = minimum_os_version
+
     if get_os_version() >= LooseVersion(minimum_os_version):
         print 'OS version is higher or equal to the minimum threshold: %s' % str(get_os_version())
         exit(0)
