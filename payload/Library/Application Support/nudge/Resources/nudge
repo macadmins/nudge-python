@@ -403,7 +403,7 @@ def main():
     random_delay = nudge_prefs.get('random_delay', False)
     nudge_su_prefs = nudge_json.get('software_updates', [])
     update_minor = nudge_prefs.get('update_minor', False)
-    update_minor_days = nudge_prefs.get('update_minor_days', 30)
+    update_minor_days = nudge_prefs.get('update_minor_days', 14)
 
     # Start information
     print 'Target OS version: %s ' % minimum_os_version
