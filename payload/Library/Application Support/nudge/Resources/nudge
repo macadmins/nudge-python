@@ -252,7 +252,7 @@ def update_app_path():
     if os.path.exists(software_updates_prefpane):
         return 'file://{}'.format(software_updates_prefpane)
     else:
-        return 'macappstore://updates'
+        return 'macappstore://showUpdatesPage'
 
 
 def pkgregex(pkgpath):
