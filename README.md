@@ -3,9 +3,9 @@
 ## Important Information
 You most certainly want to customize the following values:
 
-- `cutoffdate`
+- `cut_off_date`
 - `updatetext`
-- `moreinfourl`
+- `more_info_url`
 
 Also, you will at the very least want to change the `company_logo.png`
 
