@@ -4,7 +4,7 @@
 You most certainly want to customize the following values:
 
 - `cut_off_date`
-- `updatetext`
+- `main_subtitle_text`
 - `more_info_url`
 
 Also, you will at the very least want to change the `company_logo.png`
@@ -21,7 +21,7 @@ This tool would not be possible without [nibbler](https://github.com/pudquick/ni
 ### Notes
 Because of the way git works, nudge will not contain the `Logs` folder required for the postinstall to complete.
 
-In order to create a properly working package, you will need to run the following command:
+In order to create a properly working package, you will need to run the following command _before_ building the package:
 `munkipkg --sync /path/to/cloned_repo/nudge`.
 
 ## OS Support
@@ -144,41 +144,41 @@ Do not attempt to restore the nudge GUI to the front of a user's window.
 ```
 
 ### Timer Day 1
-The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the MDM cutoff is one day or less.
+This is when the update cutoff is one day or less.
 ```json
 "timer_day_1": 600
 ```
 
 ### Timer Day 3
-The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the MDM cutoff is three days or less.
+This is when the update cutoff is three days or less.
 ```json
 "timer_day_3": 7200
 ```
 
 ### Timer Elapsed
-The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the MDM cutoff has elapsed.
+This is when the update cutoff has elapsed.
 ```json
 "timer_elapsed": 10
 ```
 
 ### Timer Final
-The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the MDM cutoff is one hour or less.
+This is when the update is one hour or less.
 ```json
 "timer_final": 60
 ```
 
 ### Timer Initial
-The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or MDM is enrolled.
+The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the MDM cutoff is over three days.
+This is when the update cutoff is over three days.
 ```json
 "timer_initial": 14400
 ```
