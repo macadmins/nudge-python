@@ -88,7 +88,8 @@ Service or Munki Managed Software Center linking directly to a Jamf
 policy or Munki catalog item to install a major version upgrade.
 
 This is useful in situations where users do not have administrative
-privileges and cannot run `Install macOS...app` directly.
+privileges and cannot run `Install macOS...app` directly. This option
+has no effect on minor version _updates_ – only full version OS upgrades.
 
 Provide a full URL with the correct protocol for your self-servicing
 app.
@@ -102,7 +103,8 @@ app.
 "local_url_for_upgrade": "jamfselfservice://content?entity=policy&id=<id>&action=view"
 ```
 
-Note: If `local_url_for_upgrade` is provided, `path_to_app` is **ignored**.
+Note: If `local_url_for_upgrade` is provided, `path_to_app` is **ignored**
+in the configuration file.
 
 ### Minimum OS Version
 This is the minimum OS version a machine must be on to not receive this UI.
@@ -157,6 +159,8 @@ This is the path to the macOS installer application.
 ```json
 "path_to_app": "/Applications/Install macOS High Sierra.app"
 ```
+
+Note: This setting is ignored when `local_url_for_upgrade` is provided.
 
 ### No timer
 Do not attempt to restore the nudge GUI to the front of a user's window.
