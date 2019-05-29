@@ -47,8 +47,17 @@ def button_moreinfo():
 
 
 def button_update():
-    '''Start the update process'''
-    cmd = ['/usr/bin/open', PATH_TO_APP]
+    '''Start the update process
+
+    By default the original functionality wherein nudge opens the local
+    Install macOS xxx.app is intact; if provided a URL, however, that
+    URL will be opened instead. The expected format is a complete URL
+    ie. `jamfselfservice://content?entity=policy&id=XXX&action=execute`
+    '''
+    if LOCAL_URL_FOR_UPGRADE:
+        cmd = ['/usr/bin/open', LOCAL_URL_FOR_UPGRADE]
+    else:
+        cmd = ['/usr/bin/open', PATH_TO_APP]
     subprocess.Popen(cmd)
 
 
@@ -304,6 +313,7 @@ def main():
     global NUDGE_PATH
     global MORE_INFO_URL
     global PATH_TO_APP
+    global LOCAL_URL_FOR_UPGRADE
 
     # Figure out the local path of nudge
     NUDGE_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -395,6 +405,7 @@ def main():
     PATH_TO_APP = nudge_prefs.get('path_to_app',
         '/Applications/Install macOS Mojave.app')
     screenshot_path = nudge_prefs.get('screenshot_path', 'update_ss.png')
+    LOCAL_URL_FOR_UPGRADE = nudge_prefs.get('local_url_for_upgrade', False)
     timer_day_1 = nudge_prefs.get('timer_day_1', 600)
     timer_day_3 = nudge_prefs.get('timer_day_3', 7200)
     timer_elapsed = nudge_prefs.get('timer_elapsed', 10)
@@ -438,8 +449,9 @@ def main():
     if LooseVersion(minimum_os_version_major) > get_os_version_major():
         # This is a major upgrade now and needs the app. We shouldn't
         # perform minor updates.
-        if not os.path.exists(PATH_TO_APP):
-            print 'Update application not found! Exiting...'
+        if not os.path.exists(PATH_TO_APP) and not LOCAL_URL_FOR_UPGRADE:
+            print ('Update application not found and no URL provided'
+                   'for a self servicing app! Exiting...')
             exit(1)
     else:
         # do minor version stuff
