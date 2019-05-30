@@ -395,6 +395,7 @@ def main():
     PATH_TO_APP = nudge_prefs.get('path_to_app',
         '/Applications/Install macOS Mojave.app')
     screenshot_path = nudge_prefs.get('screenshot_path', 'update_ss.png')
+    LOCAL_URL_FOR_UPGRADE = nudge_prefs.get('local_url_for_upgrade', False)
     timer_day_1 = nudge_prefs.get('timer_day_1', 600)
     timer_day_3 = nudge_prefs.get('timer_day_3', 7200)
     timer_elapsed = nudge_prefs.get('timer_elapsed', 10)
@@ -438,9 +439,14 @@ def main():
     if LooseVersion(minimum_os_version_major) > get_os_version_major():
         # This is a major upgrade now and needs the app. We shouldn't
         # perform minor updates.
-        if not os.path.exists(PATH_TO_APP):
-            print 'Update application not found! Exiting...'
-            exit(1)
+        if LOCAL_URL_FOR_UPGRADE:
+            # Reassign the global PATH_TO_APP with the specified local
+            # upgrade URL
+            PATH_TO_APP = LOCAL_URL_FOR_UPGRADE
+        else:
+            if not os.path.exists(PATH_TO_APP)
+                print ('Update application not found! Exiting...')
+                exit(1)
     else:
         # do minor version stuff
         if update_minor:

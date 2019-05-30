@@ -36,7 +36,7 @@ The following operating system and versions have been tested.
 Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.
 
 ### Defined config file
-To define a configuration file, use the `jsonurl` script parameter.  
+To define a configuration file, use the `jsonurl` script parameter.
 ```bash
 --jsonurl=https://fake.domain.com/path/to/config.json
 ```
@@ -81,6 +81,30 @@ This is the second set of text above the **Update Machine** button.
 ```json
 "button_sub_titletext": "Click on the button below."
 ```
+
+### URL for self-servicing upgrade app
+This is the full URL for a local self-servicing app such as Jamf Self
+Service or Munki Managed Software Center linking directly to a Jamf
+policy or Munki catalog item to install a major version upgrade.
+
+This is useful in situations where users do not have administrative
+privileges and cannot run `Install macOS...app` directly. This option
+has no effect on minor version _updates_ – only full version OS upgrades.
+
+Provide a full URL with the correct protocol for your self-servicing
+app.
+
+- Open Jamf Self Service to main page: `jamfselfservice://content`
+- Open Jamf Self Service to view a policy by ID number: `jamfselfservice://content?entity=policy&id=<id>&action=view`
+- Open Jamf Self Service to execute a policy by ID number: `jamfselfservice://content?entity=policy&id=<id>&action=execute`
+- Open Manage Software Center to the detail page for an item: `munki://detail-<item name>`
+
+```json
+"local_url_for_upgrade": "jamfselfservice://content?entity=policy&id=<id>&action=view"
+```
+
+Note: If `local_url_for_upgrade` is provided, `path_to_app` is **ignored**
+in the configuration file.
 
 ### Minimum OS Version
 This is the minimum OS version a machine must be on to not receive this UI.
@@ -135,6 +159,8 @@ This is the path to the macOS installer application.
 ```json
 "path_to_app": "/Applications/Install macOS High Sierra.app"
 ```
+
+Note: This setting is ignored when `local_url_for_upgrade` is provided.
 
 ### No timer
 Do not attempt to restore the nudge GUI to the front of a user's window.
