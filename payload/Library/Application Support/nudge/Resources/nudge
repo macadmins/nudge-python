@@ -444,7 +444,7 @@ def main():
             # upgrade URL
             PATH_TO_APP = LOCAL_URL_FOR_UPGRADE
         else:
-            if not os.path.exists(PATH_TO_APP)
+            if not os.path.exists(PATH_TO_APP):
                 print ('Update application not found! Exiting...')
                 exit(1)
     else:
