@@ -567,13 +567,12 @@ def main():
     minimum_minor_update_days = get_minimum_minor_update_days(update_minor_days, pending_apple_updates(), nudge_su_prefs)
     if cut_off_date or (minor_updates_required and minimum_minor_update_days > 0):
         todays_date = datetime.utcnow()
-        if minor_updates_required and minimum_minor_update_days > 0:
-            date_diff_days = ((todays_date + timedelta(days=minimum_minor_update_days)) - todays_date).days
-            date_diff_seconds = date_diff_days * 86400
+        if not cut_off_date: # fix for minor updates logic
+            cut_off_date_strp = todays_date + timedelta(days=minimum_minor_update_days)
         else:
             cut_off_date_strp = datetime.strptime(cut_off_date, '%Y-%m-%d-%H:%M')
-            date_diff_seconds = (cut_off_date_strp - todays_date).total_seconds()
-            date_diff_days = int(round(date_diff_seconds / 86400))
+        date_diff_seconds = (cut_off_date_strp - todays_date).total_seconds()
+        date_diff_days = int(round(date_diff_seconds / 86400))
 
         if date_diff_seconds >= 0:
             nudge.views['field.daysremaining'].setStringValue_(
