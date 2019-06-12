@@ -447,9 +447,12 @@ def main():
             if not os.path.exists(PATH_TO_APP):
                 print ('Update application not found! Exiting...')
                 exit(1)
-    else:
-        # do minor version stuff
-        if update_minor:
+
+    elif update_minor:
+        if LOCAL_URL_FOR_UPGRADE:
+            PATH_TO_APP = LOCAL_URL_FOR_UPGRADE
+            minor_updates_required = LooseVersion(minimum_os_version) > get_os_version()
+        else:
             print 'Checking for minor updates.'
             swupd_output = download_apple_updates()
             if not swupd_output:
@@ -459,7 +462,7 @@ def main():
                 # appropriate code
                 exit(0)
 
-            if pending_apple_updates() == [] or pending_apple_updates() is None:
+            if not pending_apple_updates():
                 print 'No Software updates to install'
                 set_pref('first_seen', None)
                 set_pref('last_seen', None)
@@ -517,6 +520,8 @@ def main():
                     # we've not nagged recently
                     set_pref('last_seen', datetime.utcnow())
                     last_seen = pref('last_seen')
+
+
 
     load_nudge_globals()
 
