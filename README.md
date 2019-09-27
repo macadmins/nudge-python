@@ -30,7 +30,7 @@ The following operating system and versions have been tested.
 - 10.11.0, 10.11.6
 - 10.12.0, 10.12.6
 - 10.13.0 10.13.3, 10.13.6
-- 10.14.0
+- 10.14 -> 10.14.6
 
 ## Configuration File
 Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.
@@ -110,6 +110,13 @@ in the configuration file.
 This is the minimum OS version a machine must be on to not receive this UI.
 ```json
 "minimum_os_version": "10.13.6"
+```
+
+### Minimum OS Sub Version
+
+This is the minimum OS version a machine must be on to not receive this UI.
+```json
+"minimum_os_sub_build_version": "18G103"
 ```
 
 ### More info URL

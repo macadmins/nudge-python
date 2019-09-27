@@ -120,6 +120,14 @@ def get_console_username_info():
     return SCDynamicStoreCopyConsoleUser(None, None, None)
 
 
+def get_os_sub_build_version():
+    '''Return sub build of macOS'''
+    cmd = ['/usr/sbin/sysctl', '-n', 'kern.osversion']
+    run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, err = run.communicate()
+    return LooseVersion(output.strip())
+
+
 def get_os_version():
     '''Return OS version.'''
     return LooseVersion(platform.mac_ver()[0])
@@ -343,10 +351,6 @@ def main():
                     print(err)
                     shutil.rmtree(tmp_dir)
                     exit(1)
-                except urllib2.HTTPError, err:
-                    print(err)
-                    shutil.rmtree(tmp_dir)
-                    exit(1)
             else:
                 # If the file doesn't exist, grab it and wait half a second to save.
                 while not os.path.isfile(json_path):
@@ -380,7 +384,8 @@ def main():
     main_subtitle_text = nudge_prefs.get('main_subtitle_text',
         'A friendly reminder from your local IT team')
     main_title_text = nudge_prefs.get('main_title_text', 'macOS Update')
-    minimum_os_version = nudge_prefs.get('minimum_os_version', '10.14.0')
+    minimum_os_sub_build_version = nudge_prefs.get('minimum_os_sub_build_version', '18G84')
+    minimum_os_version = nudge_prefs.get('minimum_os_version', '10.14.6')
     minimum_os_version_major = minimum_os_version.rsplit('.', 1)[0]
     MORE_INFO_URL = nudge_prefs.get('more_info_url', False)
     no_timer = nudge_prefs.get('no_timer', False)
@@ -408,6 +413,8 @@ def main():
 
     # Start information
     print 'Target OS version: %s ' % minimum_os_version
+    if update_minor:
+        print 'Target OS subversion: %s' % minimum_os_sub_build_version
 
     # cleanup the tmp stuff now
     if cleanup:
@@ -424,19 +431,31 @@ def main():
     if '.' not in minimum_os_version_major:
         minimum_os_version_major = minimum_os_version
 
-    if get_os_version() >= LooseVersion(minimum_os_version):
-        print 'OS version is higher or equal to the minimum threshold: %s' % str(get_os_version())
+    os_version = get_os_version()
+    os_version_major = get_os_version_major()
+    os_version_sub_build = get_os_sub_build_version()
+
+    # Example 10.14.6 (18G103) >=  10.14.6 (18G84)
+    if os_version_sub_build >= LooseVersion(minimum_os_sub_build_version):
+        print 'OS version sub build is higher or equal to the minimum threshold: %s' % str(os_version_sub_build)
         exit(0)
-    elif get_os_version_major() >= LooseVersion(minimum_os_version_major) and not update_minor:
-        print 'OS major version is higher or equal to the minimum threshold and minor updates not enabled: %s ' % str(get_os_version())
+    # Example: 10.14.6 >= 10.14.6
+    elif os_version >= LooseVersion(minimum_os_version) and not update_minor:
+        print 'OS version is higher or equal to the minimum threshold: %s' % str(os_version)
+        exit(0)
+    # Example: 10.14/10.14.0 >= 10.14
+    elif os_version_major >= LooseVersion(minimum_os_version_major) and not update_minor:
+        print 'OS major version is higher or equal to the minimum threshold and minor updates not enabled: %s ' % str(os_version)
         exit(0)
     else:
-        print 'OS version is below the minimum threshold: %s' % str(get_os_version())
+        print 'OS version is below the minimum threshold: %s' % str(os_version)
+        if update_minor and LooseVersion(minimum_os_sub_build_version) > os_version_sub_build:
+            print 'OS version is below the minimum threshold subversion: %s' % str(os_version_sub_build)
 
     minor_updates_required = False
 
     # Start main logic on major and minor upgrades
-    if LooseVersion(minimum_os_version_major) > get_os_version_major():
+    if LooseVersion(minimum_os_version_major) > os_version_major:
         # This is a major upgrade now and needs the app. We shouldn't
         # perform minor updates.
         if LOCAL_URL_FOR_UPGRADE:
