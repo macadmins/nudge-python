@@ -20,18 +20,18 @@ launch_agent_plist_name='com.erikng.nudge.plist'
 # Base paths
 launch_agent_base_path='Library/LaunchAgents/'
 
-# Fail the install if the admin forgets to change their paths and they don't exist.
-if [ ! -e "$3/${launch_agent_base_path}${launch_agent_plist_name}" ]; then
-  echo "LaunchAgent missing, exiting"
-  exit 1
-fi
-
-# Make the Log path 777 to cheat - do this before loading LaunchAgent
-/bin/mkdir -p "$3/Library/nudge/Logs"
-/bin/chmod -R 777 "$3/Library/nudge/Logs"
-
 # Load agent if installing to a running system
-if [ "$3" == "/" ] ; then
+if [[ $3 == "/" ]] ; then
+  # Fail the install if the admin forgets to change their paths and they don't exist.
+  if [ ! -e "$3/${launch_agent_base_path}${launch_agent_plist_name}.plist" ]; then
+    echo "LaunchAgent missing, exiting"
+    exit 1
+  fi
+
+  # Make the Log path 777 to cheat - do this before loading LaunchAgent
+  /bin/mkdir -p "$3/Library/nudge/Logs"
+  /bin/chmod -R 777 "$3/Library/nudge/Logs"
+
   # Current console user information
   console_user=$(/usr/bin/stat -f "%Su" /dev/console)
   console_user_uid=$(/usr/bin/id -u "$console_user")
@@ -48,9 +48,9 @@ if [ "$3" == "/" ] ; then
     /bin/launchctl asuser "${console_user_uid}" /bin/launchctl list | /usr/bin/grep 'nudge'
     # Unload the agent so it can be triggered on re-install
     if [[ $? -eq 0 ]]; then
-      /bin/launchctl asuser "${console_user_uid}" /bin/launchctl unload "$3/${launch_agent_base_path}${launch_agent_plist_name}"
+      /bin/launchctl asuser "${console_user_uid}" /bin/launchctl unload "${launch_agent_plist_name}"
     fi
     # Load the launch agent
-    /bin/launchctl asuser "${console_user_uid}" /bin/launchctl load "$3/${launch_agent_base_path}${launch_agent_plist_name}"
+    /bin/launchctl asuser "${console_user_uid}" /bin/launchctl load "$3${launch_agent_base_path}${launch_agent_plist_name}.plist"
   fi
 fi
