@@ -190,7 +190,7 @@ def nudge_already_loaded():
     current_pid = str(os.getpid())
     for line in status:
         if bytes(nudge_string, 'utf-8') in line:
-            if current_pid in line:
+            if bytes(current_pid, 'utf-8') in line:
                 pass
             else:
                 return True
