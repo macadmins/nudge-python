@@ -1,11 +1,46 @@
 # Nudge (macadmin's Slack #nudge)
 
+## Embedded Python
+As of v2.0, Nudge now uses its own embedded python (currently v3.8). This is due to Apple's upcoming removal of Python2.
+
+Gurl has been updated from the Munki 4.0 release.
+
+Nibbler has been updated to support python 3.
+
+### Building embedded python framework
+
+To reduce the size of the git repository, you **must** create your own Python. To do this, simply run the `./build_python_framework` script within the repository.
+
+This process was tested on Catalina only.
+
+```
+./build_python_framework
+
+Cloning relocatable-python tool from github...
+Cloning into '/tmp/relocatable-python-git'...
+remote: Enumerating objects: 28, done.
+remote: Counting objects: 100% (28/28), done.
+remote: Compressing objects: 100% (19/19), done.
+remote: Total 78 (delta 12), reused 19 (delta 9), pack-reused 50
+Unpacking objects: 100% (78/78), done.
+Downloading https://www.python.org/ftp/python/3.8.0/python-3.8.0-macosx10.9.pkg...
+
+...
+
+Done!
+Customized, relocatable framework is at /Library/nudge/Python.framework
+Moving Python.framework to nudge munki-pkg payload folder
+Taking ownership of the file to not break git
+```
+
 ## Important Information
 You most certainly want to customize the following values:
 
 - `cut_off_date`
 - `main_subtitle_text`
 - `more_info_url`
+- `minimum_os_version`
+- `minimum_os_sub_build_version`
 
 Also, you will at the very least want to change the `company_logo.png`
 
@@ -24,13 +59,19 @@ Because of the way git works, nudge will not contain the `Logs` folder required 
 In order to create a properly working package, you will need to run the following command _before_ building the package:
 `munkipkg --sync /path/to/cloned_repo/nudge`.
 
-## OS Support
+## OS Support v1
 The following operating system and versions have been tested.
 - 10.10.0, 10.10.5
 - 10.11.0, 10.11.6
 - 10.12.0, 10.12.6
 - 10.13.0 10.13.3, 10.13.6
 - 10.14 -> 10.14.6
+- 10.15 -> 10.15.1
+
+## OS Support v2 (embedded python)
+The following operating system and versions have been tested with the embedded python.
+- 10.14
+- 10.15
 
 ## Configuration File
 Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.
