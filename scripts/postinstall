@@ -1,7 +1,6 @@
-#!/usr/bin/python
-# encoding: utf-8
+#!/bin/zsh
 #
-# Copyright 2018 Erik Gomez.
+# Copyright 2019-Present Erik Gomez.
 #
 # Licensed under the Apache License, Version 2.0 (the 'License');
 # you may not use this file except in compliance with the License.
@@ -15,77 +14,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-'''Loads the nudge LaunchAgent'''
-import os
-import subprocess
-import sys
-from SystemConfiguration import SCDynamicStoreCopyConsoleUser
+# If you change your agent file name, update the following line
+launch_agent_plist_name='com.erikng.nudge.plist'
 
+# Base paths
+launch_agent_base_path='Library/LaunchAgents/'
 
-def getconsoleuser():
-    '''get console user'''
-    cfuser = SCDynamicStoreCopyConsoleUser(None, None, None)
-    return cfuser
+# Fail the install if the admin forgets to change their paths and they don't exist.
+if [ ! -e "$3/${launch_agent_base_path}${launch_agent_plist_name}" ]; then
+  echo "LaunchAgent missing, exiting"
+  exit 1
+fi
 
+# Make the Log path 777 to cheat - do this before loading LaunchAgent
+/bin/mkdir -p "$3/Library/nudge/Logs"
+/bin/chmod -R 777 "$3/Library/nudge/Logs"
 
-def launchctl(*arg):
-    '''Use *arg to pass unlimited variables to command'''
-    cmd = ['/bin/launchctl'] + list(arg)
-    run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, err = run.communicate()
-    return output
+# Load agent if installing to a running system
+if [ "$3" == "/" ] ; then
+  # Current console user information
+  console_user=$(/usr/bin/stat -f "%Su" /dev/console)
+  console_user_uid=$(/usr/bin/id -u "$console_user")
 
-
-def main(argv):
-    '''main postinstall script'''
-    target = argv[3]
-    # Make the Log path 777 to cheat - do this before loading LaunchAgent
-    nudge_log_path = os.path.join(target,
-                                  'Library/Application Support/nudge/Logs')
-    os.chmod(nudge_log_path, 0o777)
-
-    lapath = os.path.join(target, 'Library', 'LaunchAgents',
-                          'com.erikng.nudge.plist')
-    # Fail the install if the admin forgets to change their paths and they
-    # don't exist
-    if os.path.isfile(lapath):
-        pass
-    else:
-        print 'File does not exist: %s' % lapath
-        exit(1)
-
-    # Load agents and daemons if installing to a running system
-    if target == '/':
-        currentuseruid = getconsoleuser()
-        current_user_uid = str(currentuseruid[1])
-
-        agents = [
-            'com.erikng.nudge'
-        ]
-
-        # This is a deprecated command, but until Apple kills it, it is going
-        # to be used
-        launch_agents = launchctl('asuser', current_user_uid, '/bin/launchctl',
-                                  'list')
-
-        # Now let's loop through the list
-        loaded_agents = []
-        for agent in launch_agents.split('\n'):
-            tabbed_output = agent.split('\t')
-            loaded_agents.append(tabbed_output[-1])
-
-        if (currentuseruid[0] is None or currentuseruid[0] == u'loginwindow'
-                or currentuseruid[0] == u'_mbsetupuser'):
-            pass
-        else:
-            for item in agents:
-                # Unload the agent so it can be triggered on re-install
-                if item in loaded_agents:
-                    launchctl('asuser', current_user_uid, '/bin/launchctl',
-                              'unload', lapath)
-            launchctl('asuser', current_user_uid, '/bin/launchctl', 'load',
-                      lapath)
-
-
-if __name__ == '__main__':
-    main(sys.argv)
+  # Only enable the LaunchAgent if there is a user logged in, otherwise rely on built in LaunchAgent behavior
+  if [[ -z "$console_user" ]]; then
+    echo "Did not detect user"
+  elif [[ "$console_user" == "loginwindow" ]]; then
+    echo "Detected Loginwindow Environment"
+  elif [[ "$console_user" == "_mbsetupuser" ]]; then
+    echo "Detect SetupAssistant Environment"
+  else
+    # This is a deprecated command, but until Apple kills it, it is going to be used
+    /bin/launchctl asuser "${console_user_uid}" /bin/launchctl list | /usr/bin/grep 'nudge'
+    # Unload the agent so it can be triggered on re-install
+    if [[ $? -eq 0 ]]; then
+      /bin/launchctl asuser "${console_user_uid}" /bin/launchctl unload "$3/${launch_agent_base_path}${launch_agent_plist_name}"
+    fi
+    # Load the launch agent
+    /bin/launchctl asuser "${console_user_uid}" /bin/launchctl load "$3/${launch_agent_base_path}${launch_agent_plist_name}"
+  fi
+fi

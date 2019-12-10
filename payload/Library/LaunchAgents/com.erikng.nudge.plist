@@ -10,15 +10,15 @@
 	</array>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Library/Application Support/nudge/Resources/nudge</string>
+		<string>/Library/nudge/Resources/nudge</string>
 		<string>--jsonurl=https://fake.domain.com/path/to/config.json</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>StandardOutPath</key>
-	<string>/Library/Application Support/nudge/Logs/nudge.log</string>
+	<string>/Library/nudge/Logs/nudge.log</string>
 	<key>StandardErrorPath</key>
-	<string>/Library/Application Support/nudge/Logs/nudge.log</string>
+	<string>/Library/nudge/Logs/nudge.log</string>
 	<key>StartCalendarInterval</key>
 	<array>
 		<dict>
