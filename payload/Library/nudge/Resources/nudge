@@ -464,7 +464,7 @@ def main():
             PATH_TO_APP = LOCAL_URL_FOR_UPGRADE
         else:
             if not os.path.exists(PATH_TO_APP):
-                print('Update application not found! Exiting...')
+                nudgelog('Update application not found! Exiting...')
                 exit(1)
     else:
         # do minor version stuff
