@@ -176,12 +176,12 @@ Do not attempt to restore the nudge GUI to the front of a user's window.
 "no_timer": false
 ```
 
-### Timer Day 1
+### Timer Initial
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the update cutoff is one day or less.
+This is when the update cutoff is over three days.
 ```json
-"timer_day_1": 600
+"timer_initial": 14400
 ```
 
 ### Timer Day 3
@@ -192,12 +192,12 @@ This is when the update cutoff is three days or less.
 "timer_day_3": 7200
 ```
 
-### Timer Elapsed
+### Timer Day 1
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the update cutoff has elapsed.
+This is when the update cutoff is one day or less.
 ```json
-"timer_elapsed": 10
+"timer_day_1": 600
 ```
 
 ### Timer Final
@@ -208,12 +208,12 @@ This is when the update is one hour or less.
 "timer_final": 60
 ```
 
-### Timer Initial
+### Timer Elapsed
 The time, in seconds, to restore the nudge GUI to the front of a user's window. This will occur indefinitely until the UI is closed or macOS update is installed.
 
-This is when the update cutoff is over three days.
+This is when the update cutoff has elapsed.
 ```json
-"timer_initial": 14400
+"timer_elapsed": 10
 ```
 
 ### Update screenshot path
