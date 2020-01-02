@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/Library/nudge/Python.framework/Versions/3.8/bin/python3
 # -*- coding: utf-8 -*-
 '''nudge - python wrapper for major OS updates.'''
 import json
@@ -9,20 +9,17 @@ import random
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
-import urllib
-import urllib2
-import urlparse
+import urllib.request, urllib.parse, urllib.error
 import webbrowser
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 import Foundation
 import objc
 from AppKit import NSApplication, NSImage
-from CoreFoundation import CFPreferencesCopyAppValue
-from CoreFoundation import CFPreferencesSetAppValue
-from CoreFoundation import CFPreferencesAppSynchronize
+from CoreFoundation import CFPreferencesCopyAppValue, CFPreferencesSetAppValue, CFPreferencesAppSynchronize
 from SystemConfiguration import SCDynamicStoreCopyConsoleUser
 
 from nibbler import *
@@ -32,7 +29,7 @@ import gurl
 class timerController(Foundation.NSObject):
     '''Thanks to frogor for help in figuring this part out'''
     def activateWindow_(self, timer_obj):
-        print 'Re-activating .nib to the foreground'
+        nudgelog('Re-activating .nib to the foreground')
         # Move the application to the front
         NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
         # Move the main window to the front
@@ -74,9 +71,9 @@ def downloadfile(options):
     try:
         filename = options['name']
     except KeyError:
-        print('No \'name\' key defined in json for %s' %
-              pkgregex(options['file']))
-        exit(1)
+        nudgelog(('No \'name\' key defined in json for %s' %
+               pkgregex(options['file'])))
+        sys.exit(1)
 
     try:
         while not connection.isDone():
@@ -85,12 +82,12 @@ def downloadfile(options):
                 if connection.percentComplete != -1:
                     if connection.percentComplete != percent_complete:
                         percent_complete = connection.percentComplete
-                        print('Downloading %s - Percent complete: %s ' % (
-                            filename, percent_complete))
+                        nudgelog(('Downloading %s - Percent complete: %s ' % (
+                            filename, percent_complete)))
                 elif connection.bytesReceived != bytes_received:
                     bytes_received = connection.bytesReceived
-                    print('Downloading %s - Bytes received: %s ' % (
-                        filename, bytes_received))
+                    nudgelog(('Downloading %s - Bytes received: %s ' % (
+                        filename, bytes_received)))
 
     except (KeyboardInterrupt, SystemExit):
         # safely kill the connection then fall through
@@ -102,16 +99,15 @@ def downloadfile(options):
         raise
 
     if connection.error is not None:
-        print('Error: %s %s ' % (str(connection.error.code()),
-                                 str(connection.error.localizedDescription()))
-             )
+        nudgelog(('Error: %s %s ' % (str(connection.error.code()),
+                                  str(connection.error.localizedDescription()))))
         if connection.SSLerror:
-            print 'SSL error: %s ' % (str(connection.SSLerror))
+            nudgelog('SSL error: %s ' % (str(connection.SSLerror)))
     if connection.response is not None:
-        print 'Status: %s ' % (str(connection.status))
-        print 'Headers: %s ' % (str(connection.headers))
+        nudgelog('Status: %s ' % (str(connection.status)))
+        nudgelog('Headers: %s ' % (str(connection.headers)))
     if connection.redirection != []:
-        print 'Redirection: %s ' % (str(connection.redirection))
+        nudgelog('Redirection: %s ' % (str(connection.redirection)))
 
 
 def get_console_username_info():
@@ -124,8 +120,8 @@ def get_os_sub_build_version():
     '''Return sub build of macOS'''
     cmd = ['/usr/sbin/sysctl', '-n', 'kern.osversion']
     run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, err = run.communicate()
-    return LooseVersion(output.strip())
+    output = run.communicate()[0]
+    return LooseVersion(output.decode("utf-8").strip())
 
 
 def get_os_version():
@@ -151,29 +147,24 @@ def get_parsed_options():
 def get_serial():
     '''Get system serial number'''
     # Credit to Michael Lynn
-    iokit_bundle = NSBundle.bundleWithIdentifier_("com.apple.framework.IOKit")
-    functions = [
-        ("IOServiceGetMatchingService", b"II@"),
-        ("IOServiceMatching", b"@*"),
-        ("IORegistryEntryCreateCFProperty", b"@I@@I")
-    ]
-    objc.loadBundleFunctions(iokit_bundle, globals(), functions)
+    IOKit_bundle = Foundation.NSBundle.bundleWithIdentifier_('com.apple.framework.IOKit')
 
-    kio_master_port_default = 0
-    kio_platform_serial_number_key = 'IOPlatformSerialNumber'
-    kcf_allocator_default = None
+    functions = [("IOServiceGetMatchingService", b"II@"),
+                 ("IOServiceMatching", b"@*"),
+                 ("IORegistryEntryCreateCFProperty", b"@I@@I"),
+                ]
 
+    objc.loadBundleFunctions(IOKit_bundle, globals(), functions)
     # pylint: disable=undefined-variable
-    platform_expert = IOServiceGetMatchingService(
-        kio_master_port_default,
-        IOServiceMatching("IOPlatformExpertDevice")
-    )
     serial = IORegistryEntryCreateCFProperty(
-        platform_expert,
-        kio_platform_serial_number_key,
-        kcf_allocator_default,
-        0
-    )
+        IOServiceGetMatchingService(
+            0,
+            IOServiceMatching(
+                "IOPlatformExpertDevice".encode("utf-8")
+            )),
+        Foundation.NSString.stringWithString_("IOPlatformSerialNumber"),
+        None,
+        0)
     # pylint: enable=undefined-variable
     return serial
 
@@ -185,25 +176,30 @@ def load_nudge_globals():
         global nudge
         nudge = Nibbler(os.path.join(NUDGE_PATH, 'nudge.nib'))
     except IOError:
-        print 'Unable to load nudge nib file!'
+        nudgelog('Unable to load nudge nib file!')
         exit(20)
 
 
 def nudge_already_loaded():
     '''Check if nudge is already loaded'''
-    nudge_string = '/Library/Application Support/nudge/Resources/nudge'
+    nudge_string = '/Library/nudge/Resources/nudge'
     cmd = ['/bin/ps', '-o', 'pid', '-o', 'command']
     run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, err = run.communicate()
-    status = output.split('\n')
+    status = output.split(b'\n')
     current_pid = str(os.getpid())
     for line in status:
-        if nudge_string in line:
-            if current_pid in line:
+        if bytes(nudge_string, 'utf-8') in line:
+            if bytes(current_pid, 'utf-8') in line:
                 pass
             else:
                 return True
     return False
+
+
+def nudgelog(text):
+    '''logger for nudge'''
+    Foundation.NSLog('[Nudge] ' + text)
 
 
 def pref(pref_name, domain='com.erikng.nudge'):
@@ -269,7 +265,7 @@ def pkgregex(pkgpath):
         # capture everything after last / in the pkg filepath
         pkgname = re.compile(r"[^/]+$").search(pkgpath).group(0)
         return pkgname
-    except AttributeError, IndexError:
+    except AttributeError as IndexError:
         return pkgpath
 
 
@@ -283,7 +279,7 @@ def get_minimum_minor_update_days(update_minor_days, pending_apple_updates, nudg
     for item in nudge_su_prefs:
         for update in pending_apple_updates:
             if str(item['name']) == str(update['Product Key']):
-                print '{} has a forced date'.format(update['Product Key'])
+                nudgelog('{} has a forced date'.format(update['Product Key']))
                 force_date_strp = datetime.strptime(item['force_install_date'], '%Y-%m-%d-%H:%M')
                 date_diff_seconds = (force_date_strp - todays_date).total_seconds()
                 date_diff_days = int(round(date_diff_seconds / 86400))
@@ -298,14 +294,14 @@ def main():
     opts, _ = get_parsed_options()
 
     if nudge_already_loaded():
-        print 'nudge already loaded!'
+        nudgelog('nudge already loaded!')
         exit(0)
 
     # Get the current username
     user_name, current_user_uid, _ = get_console_username_info()
 
     # Bail if we are not in a user session.
-    if user_name in (None, u'loginwindow', u'_mbsetupuser'):
+    if user_name in (None, 'loginwindow', '_mbsetupuser'):
         exit(0)
 
     # Setup our globals to use across nibbler and nibbler functions
@@ -342,24 +338,24 @@ def main():
                 headers = {'Authorization': opts.headers}
                 json_data.update({'additional_headers': headers})
 
-            url_parse = urlparse.urlparse(json_url)
+            url_parse = urllib.parse.urlparse(json_url)
             if url_parse.scheme == 'file':
                 # File resources should be handled natively
                 try:
-                    json_raw = urllib2.urlopen(json_url).read()
-                except urllib2.URLError, err:
-                    print(err)
+                    json_raw = urllib.request.urlopen(json_url).read()
+                except urllib.error.URLError as err:
+                    nudgelog(err)
                     shutil.rmtree(tmp_dir)
                     exit(1)
             else:
                 # If the file doesn't exist, grab it and wait half a second to save.
                 while not os.path.isfile(json_path):
-                    print('Starting download: %s' % (urllib.unquote(
-                        json_data['url']).decode('utf8')))
+                    nudgelog(('Starting download: %s' % (urllib.parse.unquote(
+                        json_data['url']).decode('utf8'))))
                     downloadfile(json_data)
                     time.sleep(0.5)
         else:
-            print 'nudge JSON file not specified!'
+            nudgelog('nudge JSON file not specified!')
             shutil.rmtree(tmp_dir)
             exit(1)
 
@@ -384,7 +380,7 @@ def main():
     main_subtitle_text = nudge_prefs.get('main_subtitle_text',
         'A friendly reminder from your local IT team')
     main_title_text = nudge_prefs.get('main_title_text', 'macOS Update')
-    minimum_os_sub_build_version = nudge_prefs.get('minimum_os_sub_build_version', '18G84')
+    minimum_os_sub_build_version = nudge_prefs.get('minimum_os_sub_build_version', '10A00')
     minimum_os_version = nudge_prefs.get('minimum_os_version', '10.14.6')
     minimum_os_version_major = minimum_os_version.rsplit('.', 1)[0]
     MORE_INFO_URL = nudge_prefs.get('more_info_url', False)
@@ -412,18 +408,22 @@ def main():
     update_minor_days = nudge_prefs.get('update_minor_days', 14)
 
     # Start information
-    print 'Target OS version: %s ' % minimum_os_version
+    nudgelog('Target OS version: %s ' % minimum_os_version)
     if update_minor:
-        print 'Target OS subversion: %s' % minimum_os_sub_build_version
+        if minimum_os_sub_build_version == '10A00':
+            update_minor = False
+        else:
+            nudgelog('Target OS subversion: %s' % minimum_os_sub_build_version)
+
 
     # cleanup the tmp stuff now
     if cleanup:
-        print 'Cleaning up temporary files...'
+        nudgelog('Cleaning up temporary files...')
         shutil.rmtree(tmp_dir)
 
     if random_delay:
         delay = random.randint(1,1200)
-        print 'Delaying run for {} seconds...'.format(delay)
+        nudgelog('Delaying run for {} seconds...'.format(delay))
         time.sleep(delay)
 
     # If the admin put '10.14' and not '10.14.0' the major version will be '10'
@@ -436,21 +436,21 @@ def main():
     os_version_sub_build = get_os_sub_build_version()
 
     # Example 10.14.6 (18G103) >=  10.14.6 (18G84)
-    if os_version_sub_build >= LooseVersion(minimum_os_sub_build_version):
-        print 'OS version sub build is higher or equal to the minimum threshold: %s' % str(os_version_sub_build)
+    if os_version_sub_build >= LooseVersion(minimum_os_sub_build_version) and update_minor:
+        nudgelog('OS version sub build is higher or equal to the minimum threshold: %s' % str(os_version_sub_build))
         exit(0)
     # Example: 10.14.6 >= 10.14.6
     elif os_version >= LooseVersion(minimum_os_version) and not update_minor:
-        print 'OS version is higher or equal to the minimum threshold: %s' % str(os_version)
+        nudgelog('OS version is higher or equal to the minimum threshold: %s' % str(os_version))
         exit(0)
     # Example: 10.14/10.14.0 >= 10.14
     elif os_version_major >= LooseVersion(minimum_os_version_major) and not update_minor:
-        print 'OS major version is higher or equal to the minimum threshold and minor updates not enabled: %s ' % str(os_version)
+        nudgelog('OS major version is higher or equal to the minimum threshold and minor updates not enabled: %s ' % str(os_version))
         exit(0)
     else:
-        print 'OS version is below the minimum threshold: %s' % str(os_version)
+        nudgelog('OS version is below the minimum threshold: %s' % str(os_version))
         if update_minor and LooseVersion(minimum_os_sub_build_version) > os_version_sub_build:
-            print 'OS version is below the minimum threshold subversion: %s' % str(os_version_sub_build)
+            nudgelog('OS version is below the minimum threshold subversion: %s' % str(os_version_sub_build))
 
     minor_updates_required = False
 
@@ -464,22 +464,22 @@ def main():
             PATH_TO_APP = LOCAL_URL_FOR_UPGRADE
         else:
             if not os.path.exists(PATH_TO_APP):
-                print ('Update application not found! Exiting...')
+                nudgelog('Update application not found! Exiting...')
                 exit(1)
     else:
         # do minor version stuff
         if update_minor:
-            print 'Checking for minor updates.'
+            nudgelog('Checking for minor updates.')
             swupd_output = download_apple_updates()
             if not swupd_output:
-                print 'Could not run softwareupdate'
+                nudgelog('Could not run softwareupdate')
                 # Exit 0 as we might be offline
                 # TODO: Check if we're offline to exit with the
                 # appropriate code
                 exit(0)
 
             if pending_apple_updates() == [] or pending_apple_updates() is None:
-                print 'No Software updates to install'
+                nudgelog('No Software updates to install')
                 set_pref('first_seen', None)
                 set_pref('last_seen', None)
                 exit(0)
@@ -497,8 +497,7 @@ def main():
                     # Only care about updates needing a restart
                     swupd_output = subprocess.check_output(['/usr/sbin/softwareupdate', '-la'])
                     for line in swupd_output.splitlines():
-                        print line
-                        if 'restart' in line.lower():
+                        if b'restart' in line.lower():
                             minor_updates_required = True
                             break
                 else:
@@ -506,7 +505,7 @@ def main():
                     minor_updates_required = True
 
                 if not minor_updates_required:
-                    print 'Only updates that can be installed in the background pending.'
+                    nudgelog('Only updates that can be installed in the background pending.')
                     set_pref('first_seen', None)
                     set_pref('last_seen', None)
                     exit()
@@ -523,9 +522,9 @@ def main():
                         today = datetime.utcnow()
                         last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
                         difference = today - last_seen_strp
-                        print difference.days
+                        nudgelog(difference.days)
                         if difference.days < days_between_notifications:
-                            print 'Last seen date is within notification threshold: %s ' % str(days_between_notifications)
+                            nudgelog('Last seen date is within notification threshold: %s ' % str(days_between_notifications))
                             exit(0)
 
                 if not first_seen:
@@ -687,9 +686,9 @@ def main():
     # Use cut off dates, but don't use the timer functionality
     if no_timer:
         nudge.timer.invalidate()
-        print 'Timer invalidated!'
+        nudgelog('Timer invalidated!')
     else:
-        print 'Timer is set to %s' % str(timer)
+        nudgelog('Timer is set to %s' % str(timer))
 
     # Set up our window controller and delegate
     nudge.hidden = True
