@@ -1,15 +1,15 @@
 .	40755	0/0
 ./Library	40755	0/0
-./LibraryCURRENTPATH/nudge	40755	0/0
-./LibraryCURRENTPATH/nudge/Logs	40755	0/0
-./LibraryCURRENTPATH/nudge/Logs/.gitignore	100755	0/0	14	838015408
-./LibraryCURRENTPATH/nudge/Resources	40755	0/0
-./LibraryCURRENTPATH/nudge/Resources/company_logo.png	100755	0/0	16622	2197199182
-./LibraryCURRENTPATH/nudge/Resources/nibbler.py	100755	0/0	5035	1818762266
-./LibraryCURRENTPATH/nudge/Resources/nudge	100755	0/0	14700	1920078432
-./LibraryCURRENTPATH/nudge/Resources/nudge.nib	40755	0/0
-./LibraryCURRENTPATH/nudge/Resources/nudge.nib/designable.nib	100755	0/0	22377	1573461720
-./LibraryCURRENTPATH/nudge/Resources/nudge.nib/keyedobjects.nib	100755	0/0	17325	2851127878
-./LibraryCURRENTPATH/nudge/Resources/update_ss.png	100755	0/0	270985	1514275893
+./Library/nudge	40755	0/0
+./Library/nudge/Logs	40755	0/0
+./Library/nudge/Logs/.gitignore	100755	0/0	14	838015408
+./Library/nudge/Resources	40755	0/0
+./Library/nudge/Resources/company_logo.png	100755	0/0	16622	2197199182
+./Library/nudge/Resources/nibbler.py	100755	0/0	5035	1818762266
+./Library/nudge/Resources/nudge	100755	0/0	14700	1920078432
+./Library/nudge/Resources/nudge.nib	40755	0/0
+./Library/nudge/Resources/nudge.nib/designable.nib	100755	0/0	22377	1573461720
+./Library/nudge/Resources/nudge.nib/keyedobjects.nib	100755	0/0	17325	2851127878
+./Library/nudge/Resources/update_ss.png	100755	0/0	270985	1514275893
 ./Library/LaunchAgents	40755	0/0
 ./Library/LaunchAgents/com.erikng.nudge.plist	100755	0/0	2988	3793481515
