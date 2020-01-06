@@ -51,6 +51,6 @@ if [[ $3 == "/" ]] ; then
       /bin/launchctl asuser "${console_user_uid}" /bin/launchctl unload "${launch_agent_plist_name}"
     fi
     # Load the launch agent
-    /bin/launchctl asuser "${console_user_uid}" /bin/launchctl load "$3${launch_agent_base_path}${launch_agent_plist_name}.plist"
+    /bin/launchctl asuser "${console_user_uid}" /bin/launchctl load "$3${launch_agent_base_path}${launch_agent_plist_name}"
   fi
 fi
