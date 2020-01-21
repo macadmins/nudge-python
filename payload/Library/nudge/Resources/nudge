@@ -522,7 +522,7 @@ def main():
                         today = datetime.utcnow()
                         last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
                         difference = today - last_seen_strp
-                        nudgelog(difference.days)
+                        nudgelog(str(difference.days))
                         if difference.days < days_between_notifications:
                             nudgelog('Last seen date is within notification threshold: %s ' % str(days_between_notifications))
                             exit(0)
