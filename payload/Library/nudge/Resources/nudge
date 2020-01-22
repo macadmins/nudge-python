@@ -690,6 +690,10 @@ def main():
     else:
         nudgelog('Timer is set to %s' % str(timer))
 
+    # Set last_seen to now, regardless of what it was before
+    set_pref('last_seen', datetime.utcnow())
+    last_seen = pref('last_seen')
+    
     # Set up our window controller and delegate
     nudge.hidden = True
     nudge.run()
