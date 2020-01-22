@@ -455,7 +455,7 @@ def main():
     minor_updates_required = False
 
     # Start main logic on major and minor upgrades
-    if LooseVersion(minimum_os_version_major) > os_version_major:
+    if LooseVersion(minimum_os_version_major) > os_version:
         # This is a major upgrade now and needs the app. We shouldn't
         # perform minor updates.
         if LOCAL_URL_FOR_UPGRADE:
