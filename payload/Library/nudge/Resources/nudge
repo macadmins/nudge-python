@@ -131,8 +131,15 @@ def get_os_version():
 def get_os_version_major():
     '''Return major OS version.'''
     full_os = platform.mac_ver()[0]
-    return LooseVersion(full_os.rsplit('.', 1)[0])
-
+    # Sometimes the OS version will return without the dot release
+    # For example, it may show as 10.15.0 instead of 10.15
+    if len(full_os.split('.')) == 3:
+        return LooseVersion(full_os.rsplit('.', 1)[0])
+    elif len(full_os.split('.')) == 2:
+        return LooseVersion(full_os)
+    else:
+        nudgelog('Cannot reliably determine OS major version. Exiting...')
+        exit(1)
 
 def get_parsed_options():
     '''Return the parsed options and args for this application.'''
