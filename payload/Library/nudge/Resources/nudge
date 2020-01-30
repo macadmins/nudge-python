@@ -538,11 +538,6 @@ def main():
                     set_pref('first_seen', datetime.utcnow())
                     first_seen = pref('first_seen')
 
-                if not last_seen:
-                    # we've not nagged recently
-                    set_pref('last_seen', datetime.utcnow())
-                    last_seen = pref('last_seen')
-
     load_nudge_globals()
 
     # Use the paths defined, or default to pngs in the same local path of
@@ -696,6 +691,10 @@ def main():
         nudgelog('Timer invalidated!')
     else:
         nudgelog('Timer is set to %s' % str(timer))
+
+    # Set last_seen pref
+    set_pref('last_seen', datetime.utcnow())
+    last_seen = pref('last_seen')
 
     # Set up our window controller and delegate
     nudge.hidden = True
