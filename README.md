@@ -210,6 +210,13 @@ This is the path to the macOS installer application.
 
 Note: This setting is ignored when `local_url_for_upgrade` is provided.
 
+### Days Between Notifications
+Instead of having the Nudge GUI appear every half hour, make sure there is at least this many days between notifications. 
+*Note*: if you set this to something other than 0, it may not be evaluated in full 24-hour increments. For example, if the Nudge GUI appeared on Monday in the afternoon, it may appear Tuesday morning.
+```json
+"days_between_notifications": 0
+```
+
 ### No timer
 Do not attempt to restore the nudge GUI to the front of a user's window.
 
