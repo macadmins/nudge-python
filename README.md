@@ -123,6 +123,13 @@ This is the second set of text above the **Update Machine** button.
 "button_sub_titletext": "Click on the button below."
 ```
 
+### Dismissal Count Threshold
+This is the amount of times a user can disregard nudge before more aggressive behaviors kick in.
+
+```json
+"dismissal_count_threshold": 100
+```
+
 ### URL for self-servicing upgrade app
 This is the full URL for a local self-servicing app such as Jamf Self
 Service or Munki Managed Software Center linking directly to a Jamf
@@ -211,7 +218,7 @@ This is the path to the macOS installer application.
 Note: This setting is ignored when `local_url_for_upgrade` is provided.
 
 ### Days Between Notifications
-Instead of having the Nudge GUI appear every half hour, make sure there is at least this many days between notifications. 
+Instead of having the Nudge GUI appear every half hour, make sure there is at least this many days between notifications.
 *Note*: if you set this to something other than 0, it may not be evaluated in full 24-hour increments. For example, if the Nudge GUI appeared on Monday in the afternoon, it may appear Tuesday morning.
 ```json
 "days_between_notifications": 0
