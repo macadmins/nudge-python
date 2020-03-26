@@ -12,19 +12,24 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib.request, urllib.parse, urllib.error
+import urllib.error
+import urllib.parse
+import urllib.request
 import webbrowser
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
-from urllib.parse import urlparse, unquote
-from Foundation import NSObject, NSBundle, NSString, NSLog, NSDate, NSURL, NSData, NSLog, NSTimer 
+from urllib.parse import unquote, urlparse
+
+import gurl
 import objc
 from AppKit import *
-from CoreFoundation import CFPreferencesCopyAppValue, CFPreferencesSetAppValue, CFPreferencesAppSynchronize
-from SystemConfiguration import SCDynamicStoreCopyConsoleUser
-
+from CoreFoundation import (CFPreferencesAppSynchronize,
+                            CFPreferencesCopyAppValue,
+                            CFPreferencesSetAppValue)
+from Foundation import (NSURL, NSBundle, NSData, NSDate, NSLog, NSObject,
+                        NSString, NSTimer)
 from nibbler import *
-import gurl
+from SystemConfiguration import SCDynamicStoreCopyConsoleUser
 
 # Figure out the local path of nudge
 nudge_path = os.path.dirname(os.path.realpath(__file__))
@@ -50,14 +55,14 @@ class timerController(NSObject):
         return self
 
     def activateWindow_(self, timer_obj):
-        determine_state_and_nudge()
+        self.determine_state_and_nudge()
 
     def determine_state_and_nudge(self):
         '''Determine the state of nudge and re-fresh window'''
         workspace = NSWorkspace.sharedWorkspace()
         currently_active = NSApplication.sharedApplication().isActive()
         frontmost_app = workspace.frontmostApplication().bundleIdentifier()
-        # Setup these globals as we will potentially override them
+        
         if not currently_active and frontmost_app not in self.acceptable_apps:
             nudgelog('Nudge or acceptable applications not currently active')
             # If this is the under max dismissed count, just bring nudge back to the forefront
@@ -65,7 +70,7 @@ class timerController(NSObject):
             if self.nudge_dismissed_count < self.dismissall_count_threshold:
                 nudgelog('Nudge dismissed count under threshold')
                 self.nudge_dismissed_count += 1
-                bring_nudge_to_forefront()
+                self.bring_nudge_to_forefront()
             else:
                 # Get more aggressive - new behavior
                 nudgelog('Nudge dismissed count over threshold')
@@ -91,7 +96,7 @@ class timerController(NSObject):
                         time.sleep(0.001)
                 # Another small sleep to ensure we can bring Nudge on top
                 time.sleep(0.5)
-                bring_nudge_to_forefront()
+                self.bring_nudge_to_forefront()
                 # Pretend to open the button and open the update mechanism
                 button_update(True)
 
