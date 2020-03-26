@@ -17,7 +17,7 @@ import webbrowser
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from urllib.parse import urlparse, unquote
-import Foundation
+from Foundation import NSObject, NSBundle, NSString, NSLog, NSDate, NSURL, NSData, NSLog, NSTimer 
 import objc
 from AppKit import *
 from CoreFoundation import CFPreferencesCopyAppValue, CFPreferencesSetAppValue, CFPreferencesAppSynchronize
@@ -26,68 +26,84 @@ from SystemConfiguration import SCDynamicStoreCopyConsoleUser
 from nibbler import *
 import gurl
 
+# Figure out the local path of nudge
+nudge_path = os.path.dirname(os.path.realpath(__file__))
 
-class timerController(Foundation.NSObject):
+# Try to figure out the path of nudge.nib and load it.
+try:
+    nudge = Nibbler(os.path.join(nudge_path, 'nudge.nib'))
+except IOError:
+    nudgelog('Unable to load nudge nib file!')
+    exit(20)
+
+
+class timerController(NSObject):
     '''Thanks to frogor for help in figuring this part out'''
+    def initWithDismissedCount_AcceptableApps_DismissalCountThreshold_(self,
+                                                                       nudge_dismissed_count,
+                                                                       acceptable_apps,
+                                                                       dismissal_count_threshold):
+        self.nudge_dismissed_count = nudge_dismissed_count
+        self.acceptable_apps = acceptable_apps
+        self.dismissall_count_threshold = dismissal_count_threshold
+
+        return self
+
     def activateWindow_(self, timer_obj):
         determine_state_and_nudge()
 
+    def determine_state_and_nudge(self):
+        '''Determine the state of nudge and re-fresh window'''
+        workspace = NSWorkspace.sharedWorkspace()
+        currently_active = NSApplication.sharedApplication().isActive()
+        frontmost_app = workspace.frontmostApplication().bundleIdentifier()
+        # Setup these globals as we will potentially override them
+        if not currently_active and frontmost_app not in self.acceptable_apps:
+            nudgelog('Nudge or acceptable applications not currently active')
+            # If this is the under max dismissed count, just bring nudge back to the forefront
+            # This is the old behavior
+            if self.nudge_dismissed_count < self.dismissall_count_threshold:
+                nudgelog('Nudge dismissed count under threshold')
+                self.nudge_dismissed_count += 1
+                bring_nudge_to_forefront()
+            else:
+                # Get more aggressive - new behavior
+                nudgelog('Nudge dismissed count over threshold')
+                self.nudge_dismissed_count += 1
+                nudgelog('Enforcing acceptable applications')
+                # Loop through all the running applications
+                for app in NSWorkspace.sharedWorkspace().runningApplications():
+                    app_name = str(app.bundleIdentifier())
+                    app_bundle = str(app.bundleURL())
+                    if app_bundle:
+                        # The app bundle contains file://, quoted path and trailing slashes
+                        app_bundle_path = unquote(urlparse(app_bundle).path).rstrip('\/')
+                        # Add Software Update pane or macOS upgrade app to acceptable app list
+                        if app_bundle_path == PATH_TO_APP:
+                            self.acceptable_apps.append(app_name)
+                    else:
+                        # Some of the apps from NSWorkspace don't have bundles, so force empty string
+                        app_bundle_path = ''
+                    # Hide any apps that are not in acceptable list or are not the macOS upgrade app
+                    if (app_name not in self.acceptable_apps) or (app_bundle_path != PATH_TO_APP):
+                        app.hide()
+                        # Race condition with NSWorkspace. Python is faster :)
+                        time.sleep(0.001)
+                # Another small sleep to ensure we can bring Nudge on top
+                time.sleep(0.5)
+                bring_nudge_to_forefront()
+                # Pretend to open the button and open the update mechanism
+                button_update(True)
 
-def determine_state_and_nudge():
-    '''Determine the state of nudge and re-fresh window'''
-    workspace = NSWorkspace.sharedWorkspace()
-    currently_active = NSApplication.sharedApplication().isActive()
-    frontmost_app = workspace.frontmostApplication().bundleIdentifier()
-    # Setup these globals as we will potentially override them
-    global NUDGE_DISMISSED_COUNT
-    global ACCEPTABLE_APPS
-    if not currently_active and frontmost_app not in ACCEPTABLE_APPS:
-        nudgelog('Nudge or acceptable applications not currently active')
-        # If this is the under max dismissed count, just bring nudge back to the forefront
-        # This is the old behavior
-        if NUDGE_DISMISSED_COUNT < DISMISSAL_COUNT_THRESHOLD:
-            nudgelog('Nudge dismissed count under threshold')
-            NUDGE_DISMISSED_COUNT += 1
-            bring_nudge_to_forefront()
-        else:
-            # Get more aggressive - new behavior
-            nudgelog('Nudge dismissed count over threshold')
-            NUDGE_DISMISSED_COUNT += 1
-            nudgelog('Enforcing acceptable applications')
-            # Loop through all the running applications
-            for app in NSWorkspace.sharedWorkspace().runningApplications():
-                app_name = str(app.bundleIdentifier())
-                app_bundle = str(app.bundleURL())
-                if app_bundle:
-                    # The app bundle contains file://, quoted path and trailing slashes
-                    app_bundle_path = unquote(urlparse(app_bundle).path).rstrip('\/')
-                    # Add Software Update pane or macOS upgrade app to acceptable app list
-                    if app_bundle_path == PATH_TO_APP:
-                        ACCEPTABLE_APPS.append(app_name)
-                else:
-                    # Some of the apps from NSWorkspace don't have bundles, so force empty string
-                    app_bundle_path = ''
-                # Hide any apps that are not in acceptable list or are not the macOS upgrade app
-                if (app_name not in ACCEPTABLE_APPS) or (app_bundle_path != PATH_TO_APP):
-                    app.hide()
-                    # Race condition with NSWorkspace. Python is faster :)
-                    time.sleep(0.001)
-            # Another small sleep to ensure we can bring Nudge on top
-            time.sleep(0.5)
-            bring_nudge_to_forefront()
-            # Pretend to open the button and open the update mechanism
-            button_update(True)
-
-
-def bring_nudge_to_forefront():
-    '''Brings nudge to the forefront - old behavior'''
-    nudgelog('Nudge not active - Activating to the foreground')
-    # We have to bring back python to the forefront since nibbler is a giant cheat
-    NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
-    # Now bring the nudge window itself to the forefront
-    # Nibbler objects have a .win property (...should probably be .window)
-    # that contains a reference to the first NSWindow it finds
-    nudge.win.makeKeyAndOrderFront_(None)
+    def bring_nudge_to_forefront(self):
+        '''Brings nudge to the forefront - old behavior'''
+        nudgelog('Nudge not active - Activating to the foreground')
+        # We have to bring back python to the forefront since nibbler is a giant cheat
+        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+        # Now bring the nudge window itself to the forefront
+        # Nibbler objects have a .win property (...should probably be .window)
+        # that contains a reference to the first NSWindow it finds
+        nudge.win.makeKeyAndOrderFront_(None)
 
 
 def button_moreinfo():
@@ -215,7 +231,7 @@ def get_parsed_options():
 def get_serial():
     '''Get system serial number'''
     # Credit to Michael Lynn
-    IOKit_bundle = Foundation.NSBundle.bundleWithIdentifier_('com.apple.framework.IOKit')
+    IOKit_bundle = NSBundle.bundleWithIdentifier_('com.apple.framework.IOKit')
 
     functions = [("IOServiceGetMatchingService", b"II@"),
                  ("IOServiceMatching", b"@*"),
@@ -230,23 +246,11 @@ def get_serial():
             IOServiceMatching(
                 "IOPlatformExpertDevice".encode("utf-8")
             )),
-        Foundation.NSString.stringWithString_("IOPlatformSerialNumber"),
+        NSString.stringWithString_("IOPlatformSerialNumber"),
         None,
         0)
     # pylint: enable=undefined-variable
     return serial
-
-
-def load_nudge_globals():
-    '''Try to figure out the path of nudge.nib and load it.'''
-    try:
-        # Setup our global nudge variable to inject into our nib file
-        global nudge
-        nudge = Nibbler(os.path.join(NUDGE_PATH, 'nudge.nib'))
-    except IOError:
-        nudgelog('Unable to load nudge nib file!')
-        exit(20)
-
 
 def nudge_already_loaded():
     '''Check if nudge is already loaded'''
@@ -267,7 +271,7 @@ def nudge_already_loaded():
 
 def nudgelog(text):
     '''logger for nudge'''
-    Foundation.NSLog('[Nudge] ' + text)
+    NSLog('[Nudge] ' + text)
 
 
 def pref(pref_name, domain='com.erikng.nudge'):
@@ -280,7 +284,7 @@ def pref(pref_name, domain='com.erikng.nudge'):
     """
     pref_value = CFPreferencesCopyAppValue(
         pref_name, domain)
-    if isinstance(pref_value, Foundation.NSDate):
+    if isinstance(pref_value, NSDate):
         # convert NSDate/CFDates to strings
         pref_value = str(pref_value)
     return pref_value
@@ -373,19 +377,12 @@ def main():
         exit(0)
 
     # Setup our globals to use across nibbler and nibbler functions
-    global DISMISSAL_COUNT_THRESHOLD
-    global NUDGE_PATH
     global MORE_INFO_URL
     global PATH_TO_APP
-    global NUDGE_DISMISSED_COUNT
-    global ACCEPTABLE_APPS
-
-    # Figure out the local path of nudge
-    NUDGE_PATH = os.path.dirname(os.path.realpath(__file__))
 
     # Part for enhanced enforcement of Nudge
-    NUDGE_DISMISSED_COUNT = 0
-    ACCEPTABLE_APPS = [
+    nudge_dismissed_count = 0
+    acceptable_apps = [
         'com.apple.loginwindow',
         'com.apple.systempreferences',
         'org.python.python'
@@ -393,7 +390,7 @@ def main():
 
     # local json path - if it exists already, let's assume someone is bundling
     # it with their package. Otherwise check for it and use gurl.
-    json_path = os.path.join(NUDGE_PATH, 'nudge.json')
+    json_path = os.path.join(nudge_path, 'nudge.json')
     cleanup = True
     if os.path.isfile(json_path):
         cleanup = False
@@ -455,7 +452,7 @@ def main():
     cut_off_date_warning = nudge_prefs.get('cut_off_date_warning', 3)
     days_between_notifications = nudge_prefs.get('days_between_notifications',
         0)
-    DISMISSAL_COUNT_THRESHOLD = nudge_prefs.get('dismissal_count_threshold', 9999999)
+    dismissal_count_threshold = nudge_prefs.get('dismissal_count_threshold', 9999999)
     logo_path = nudge_prefs.get('logo_path', 'company_logo.png')
     main_subtitle_text = nudge_prefs.get('main_subtitle_text',
         'A friendly reminder from your local IT team')
@@ -494,7 +491,7 @@ def main():
             update_minor = False
         else:
             nudgelog('Target OS subversion: %s' % minimum_os_sub_build_version)
-    nudgelog('Dismissal count threshold: %s ' % DISMISSAL_COUNT_THRESHOLD)
+    nudgelog('Dismissal count threshold: %s ' % dismissal_count_threshold)
 
 
     # cleanup the tmp stuff now
@@ -612,19 +609,17 @@ def main():
                     set_pref('first_seen', datetime.utcnow())
                     first_seen = pref('first_seen')
 
-    load_nudge_globals()
-
     # Use the paths defined, or default to pngs in the same local path of
     # nudge
     for index, path in enumerate([logo_path, screenshot_path]):
         if path in ('company_logo.png', 'update_ss.png'):
             local_png_path = os.path.join(
-                NUDGE_PATH, path).replace(' ', '%20')
+                nudge_path, path).replace(' ', '%20')
         else:
             local_png_path = os.path.join(path).replace(' ', '%20')
-        foundation_nsurl_path = Foundation.NSURL.URLWithString_(
+        foundation_nsurl_path = NSURL.URLWithString_(
             'file:' + local_png_path)
-        foundation_nsdata = Foundation.NSData.dataWithContentsOfURL_(
+        foundation_nsdata = NSData.dataWithContentsOfURL_(
             foundation_nsurl_path)
         foundation_nsimage = NSImage.alloc().initWithData_(
             foundation_nsdata)
@@ -679,13 +674,17 @@ def main():
             cut_off_date_warning) * 86400)
 
         # Setup our timer controller
-        nudge.timer_controller = timerController.alloc().init()
+        timer_controller = timerController.new()
+        nudge.timer_controller = (
+            timer_controller.
+            initWithDismissedCount_AcceptableApps_DismissalCountThreshold_(
+                nudge_dismissed_count, acceptable_apps, dismissal_count_threshold))
 
         if date_diff_seconds <= 0:
             # If the cutoff date is over, get stupidly aggressive
 
             # Disable all buttons so the user cannot exit out of the
-            # application, and have the manualenrollment button appear
+            # application, and have the Update Machine button appear
             nudge.views['button.ok'].setHidden_(True)
             nudge.views['button.understand'].setHidden_(True)
 
@@ -740,8 +739,7 @@ def main():
             timer = float(timer_initial)
 
         nudge.timer = (
-            Foundation
-            .NSTimer
+            NSTimer
             .scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
                 timer, nudge.timer_controller, 'activateWindow:', None, True))
     else:
