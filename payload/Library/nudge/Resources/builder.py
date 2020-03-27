@@ -3,7 +3,7 @@ import webbrowser
 import subprocess
 
 from nibbler import *
-from nudge_helpers import nudgelog
+from helpers import nudgelog
 
 class Builder(object):
     '''Class which build the nudge tool'''

@@ -4,7 +4,7 @@ from urllib.parse import unquote, urlparse
 
 from AppKit import NSWorkspace, NSApplication
 from Foundation import NSObject
-from nudge_builder import Builder
+from helpers import nudgelog
 
 class timerController(NSObject):
     '''Thanks to frogor for help in figuring this part out'''
@@ -65,7 +65,7 @@ class timerController(NSObject):
                 time.sleep(0.5)
                 self.bring_nudge_to_forefront()
                 # Pretend to open the button and open the update mechanism
-                button_update(True)
+                nudge.button_update(True)
 
     def bring_nudge_to_forefront(self):
         '''Brings nudge to the forefront - old behavior'''
@@ -75,7 +75,7 @@ class timerController(NSObject):
         # Now bring the nudge window itself to the forefront
         # Nibbler objects have a .win property (...should probably be .window)
         # that contains a reference to the first NSWindow it finds
-        nudge.win.makeKeyAndOrderFront_(None)
+        nudge.nudge.win.makeKeyAndOrderFront_(None)
 
 if __name__ == '__main__':
     print('This is a library of support tools for the Nudge Tool.')
