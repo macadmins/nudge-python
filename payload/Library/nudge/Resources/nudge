@@ -13,7 +13,6 @@ import sys
 import tempfile
 import time
 import urllib.error
-import urllib.parse
 import urllib.request
 import webbrowser
 from datetime import datetime, timedelta
@@ -22,352 +21,23 @@ from urllib.parse import unquote, urlparse
 
 import gurl
 import objc
-from AppKit import *
-from CoreFoundation import (CFPreferencesAppSynchronize,
-                            CFPreferencesCopyAppValue,
-                            CFPreferencesSetAppValue)
+
+from AppKit import NSImage
+
 from Foundation import (NSURL, NSBundle, NSData, NSDate, NSLog, NSObject,
                         NSString, NSTimer)
-from nibbler import *
-from SystemConfiguration import SCDynamicStoreCopyConsoleUser
 
-# Figure out the local path of nudge
-nudge_path = os.path.dirname(os.path.realpath(__file__))
-
-# Try to figure out the path of nudge.nib and load it.
-try:
-    nudge = Nibbler(os.path.join(nudge_path, 'nudge.nib'))
-except IOError:
-    nudgelog('Unable to load nudge nib file!')
-    exit(20)
-
-
-class timerController(NSObject):
-    '''Thanks to frogor for help in figuring this part out'''
-    def initWithDismissedCount_AcceptableApps_DismissalCountThreshold_(self,
-                                                                       nudge_dismissed_count,
-                                                                       acceptable_apps,
-                                                                       dismissal_count_threshold):
-        self.nudge_dismissed_count = nudge_dismissed_count
-        self.acceptable_apps = acceptable_apps
-        self.dismissall_count_threshold = dismissal_count_threshold
-
-        return self
-
-    def activateWindow_(self, timer_obj):
-        self.determine_state_and_nudge()
-
-    def determine_state_and_nudge(self):
-        '''Determine the state of nudge and re-fresh window'''
-        workspace = NSWorkspace.sharedWorkspace()
-        currently_active = NSApplication.sharedApplication().isActive()
-        frontmost_app = workspace.frontmostApplication().bundleIdentifier()
-        
-        if not currently_active and frontmost_app not in self.acceptable_apps:
-            nudgelog('Nudge or acceptable applications not currently active')
-            # If this is the under max dismissed count, just bring nudge back to the forefront
-            # This is the old behavior
-            if self.nudge_dismissed_count < self.dismissall_count_threshold:
-                nudgelog('Nudge dismissed count under threshold')
-                self.nudge_dismissed_count += 1
-                self.bring_nudge_to_forefront()
-            else:
-                # Get more aggressive - new behavior
-                nudgelog('Nudge dismissed count over threshold')
-                self.nudge_dismissed_count += 1
-                nudgelog('Enforcing acceptable applications')
-                # Loop through all the running applications
-                for app in NSWorkspace.sharedWorkspace().runningApplications():
-                    app_name = str(app.bundleIdentifier())
-                    app_bundle = str(app.bundleURL())
-                    if app_bundle:
-                        # The app bundle contains file://, quoted path and trailing slashes
-                        app_bundle_path = unquote(urlparse(app_bundle).path).rstrip('\/')
-                        # Add Software Update pane or macOS upgrade app to acceptable app list
-                        if app_bundle_path == PATH_TO_APP:
-                            self.acceptable_apps.append(app_name)
-                    else:
-                        # Some of the apps from NSWorkspace don't have bundles, so force empty string
-                        app_bundle_path = ''
-                    # Hide any apps that are not in acceptable list or are not the macOS upgrade app
-                    if (app_name not in self.acceptable_apps) or (app_bundle_path != PATH_TO_APP):
-                        app.hide()
-                        # Race condition with NSWorkspace. Python is faster :)
-                        time.sleep(0.001)
-                # Another small sleep to ensure we can bring Nudge on top
-                time.sleep(0.5)
-                self.bring_nudge_to_forefront()
-                # Pretend to open the button and open the update mechanism
-                button_update(True)
-
-    def bring_nudge_to_forefront(self):
-        '''Brings nudge to the forefront - old behavior'''
-        nudgelog('Nudge not active - Activating to the foreground')
-        # We have to bring back python to the forefront since nibbler is a giant cheat
-        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
-        # Now bring the nudge window itself to the forefront
-        # Nibbler objects have a .win property (...should probably be .window)
-        # that contains a reference to the first NSWindow it finds
-        nudge.win.makeKeyAndOrderFront_(None)
-
-
-def button_moreinfo():
-    '''Open browser more info button'''
-    nudgelog('User clicked on more info button - opening URL in default browser')
-    webbrowser.open_new_tab(MORE_INFO_URL)
-
-
-def button_update(simulated_click=False):
-    '''Start the update process'''
-    if simulated_click:
-        nudgelog('Simulated click on update button - opening update application')
-    else:
-        nudgelog('User clicked on update button - opening update application')
-    cmd = ['/usr/bin/open', PATH_TO_APP]
-    subprocess.Popen(cmd)
-
-
-def button_ok():
-    '''Quit out of nudge if user hits the ok button'''
-    nudgelog('User clicked on ok button - exiting application')
-    nudge.quit()
-
-
-def button_understand():
-    '''Add an extra button to force the user to read the dialog, prior to being
-    able to exit the UI.'''
-    nudgelog('User clicked on understand button - enabling ok button')
-    nudge.views['button.understand'].setHidden_(True)
-    nudge.views['button.ok'].setHidden_(False)
-    nudge.views['button.ok'].setEnabled_(True)
-
-
-def downloadfile(options):
-    '''download file with gurl'''
-    connection = gurl.Gurl.alloc().initWithOptions_(options)
-    percent_complete = -1
-    bytes_received = 0
-    connection.start()
-    try:
-        filename = options['name']
-    except KeyError:
-        nudgelog(('No \'name\' key defined in json for %s' %
-               pkgregex(options['file'])))
-        sys.exit(1)
-
-    try:
-        while not connection.isDone():
-            if connection.destination_path:
-                # only print progress info if we are writing to a file
-                if connection.percentComplete != -1:
-                    if connection.percentComplete != percent_complete:
-                        percent_complete = connection.percentComplete
-                        nudgelog(('Downloading %s - Percent complete: %s ' % (
-                            filename, percent_complete)))
-                elif connection.bytesReceived != bytes_received:
-                    bytes_received = connection.bytesReceived
-                    nudgelog(('Downloading %s - Bytes received: %s ' % (
-                        filename, bytes_received)))
-
-    except (KeyboardInterrupt, SystemExit):
-        # safely kill the connection then fall through
-        connection.cancel()
-    except Exception:  # too general, I know
-        # Let us out! ... Safely! Unexpectedly quit dialogs are annoying ...
-        connection.cancel()
-        # Re-raise the error
-        raise
-
-    if connection.error is not None:
-        nudgelog(('Error: %s %s ' % (str(connection.error.code()),
-                                  str(connection.error.localizedDescription()))))
-        if connection.SSLerror:
-            nudgelog('SSL error: %s ' % (str(connection.SSLerror)))
-    if connection.response is not None:
-        nudgelog('Status: %s ' % (str(connection.status)))
-        nudgelog('Headers: %s ' % (str(connection.headers)))
-    if connection.redirection != []:
-        nudgelog('Redirection: %s ' % (str(connection.redirection)))
-
-
-def get_console_username_info():
-    '''Uses Apple's SystemConfiguration framework to get the current
-    console username'''
-    return SCDynamicStoreCopyConsoleUser(None, None, None)
-
-
-def get_os_sub_build_version():
-    '''Return sub build of macOS'''
-    cmd = ['/usr/sbin/sysctl', '-n', 'kern.osversion']
-    run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output = run.communicate()[0]
-    return LooseVersion(output.decode("utf-8").strip())
-
-
-def get_os_version():
-    '''Return OS version.'''
-    return LooseVersion(platform.mac_ver()[0])
-
-
-def get_os_version_major():
-    '''Return major OS version.'''
-    full_os = platform.mac_ver()[0]
-    # Sometimes the OS version will return without the dot release
-    # For example, it may show as 10.15.0 instead of 10.15
-    if len(full_os.split('.')) == 3:
-        return LooseVersion(full_os.rsplit('.', 1)[0])
-    elif len(full_os.split('.')) == 2:
-        return LooseVersion(full_os)
-    else:
-        nudgelog('Cannot reliably determine OS major version. Exiting...')
-        exit(1)
-
-
-def get_parsed_options():
-    '''Return the parsed options and args for this application.'''
-    # Options
-    usage = '%prog [options]'
-    options = optparse.OptionParser(usage=usage)
-    options.add_option('--headers', help=('Optional: Auth headers'))
-    options.add_option('--jsonurl', help=('Required: URL to json file.'))
-    return options.parse_args()
-
-
-def get_serial():
-    '''Get system serial number'''
-    # Credit to Michael Lynn
-    IOKit_bundle = NSBundle.bundleWithIdentifier_('com.apple.framework.IOKit')
-
-    functions = [("IOServiceGetMatchingService", b"II@"),
-                 ("IOServiceMatching", b"@*"),
-                 ("IORegistryEntryCreateCFProperty", b"@I@@I"),
-                ]
-
-    objc.loadBundleFunctions(IOKit_bundle, globals(), functions)
-    # pylint: disable=undefined-variable
-    serial = IORegistryEntryCreateCFProperty(
-        IOServiceGetMatchingService(
-            0,
-            IOServiceMatching(
-                "IOPlatformExpertDevice".encode("utf-8")
-            )),
-        NSString.stringWithString_("IOPlatformSerialNumber"),
-        None,
-        0)
-    # pylint: enable=undefined-variable
-    return serial
-
-def nudge_already_loaded():
-    '''Check if nudge is already loaded'''
-    nudge_string = '/Library/nudge/Resources/nudge'
-    cmd = ['/bin/ps', '-o', 'pid', '-o', 'command']
-    run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, err = run.communicate()
-    status = output.split(b'\n')
-    current_pid = str(os.getpid())
-    for line in status:
-        if bytes(nudge_string, 'utf-8') in line:
-            if bytes(current_pid, 'utf-8') in line:
-                pass
-            else:
-                return True
-    return False
-
-
-def nudgelog(text):
-    '''logger for nudge'''
-    NSLog('[Nudge] ' + text)
-
-
-def pref(pref_name, domain='com.erikng.nudge'):
-    """Returns a preference from the specified domain.
-
-    Uses CoreFoundation.
-
-    Args:
-      pref_name: str preference name to get.
-    """
-    pref_value = CFPreferencesCopyAppValue(
-        pref_name, domain)
-    if isinstance(pref_value, NSDate):
-        # convert NSDate/CFDates to strings
-        pref_value = str(pref_value)
-    return pref_value
-
-
-def set_pref(pref_name, value, domain='com.erikng.nudge'):
-    """Sets a value in Preferences.
-    Uses CoreFoundation.
-    Args:
-       pref_name: str preference name to set.
-       value: value to set it to.
-    """
-    CFPreferencesSetAppValue(pref_name, value, domain)
-    CFPreferencesAppSynchronize(domain)
-
-
-def download_apple_updates():
-    '''Download everything Softwareupdate has to offer'''
-
-    cmd = [
-        '/usr/sbin/softwareupdate',
-        '-da',
-        '--force'
-    ]
-
-    try:
-        return subprocess.check_output(cmd)
-    except subprocess.CalledProcessError:
-        return None
-
-
-def pending_apple_updates():
-    '''Pending apple updates
-    Returns a dict of pending updates'''
-
-    return pref('RecommendedUpdates', 'com.apple.SoftwareUpdate')
-
-
-def update_app_path():
-    software_updates_prefpane = '/System/Library/PreferencePanes/SoftwareUpdate.prefPane'
-    if os.path.exists(software_updates_prefpane):
-        return 'file://{}'.format(software_updates_prefpane)
-    else:
-        return 'macappstore://showUpdatesPage'
-
-
-def pkgregex(pkgpath):
-    '''regular expression for pkg'''
-    try:
-        # capture everything after last / in the pkg filepath
-        pkgname = re.compile(r"[^/]+$").search(pkgpath).group(0)
-        return pkgname
-    except AttributeError as IndexError:
-        return pkgpath
-
-
-def get_minimum_minor_update_days(update_minor_days, pending_apple_updates, nudge_su_prefs):
-    '''Lowest number of days before something is forced'''
-    if pending_apple_updates == [] or pending_apple_updates is None:
-        return update_minor_days
-
-    lowest_days = update_minor_days
-    todays_date = datetime.utcnow()
-    for item in nudge_su_prefs:
-        for update in pending_apple_updates:
-            if str(item['name']) == str(update['Product Key']):
-                nudgelog('{} has a forced date'.format(update['Product Key']))
-                force_date_strp = datetime.strptime(item['force_install_date'], '%Y-%m-%d-%H:%M')
-                date_diff_seconds = (force_date_strp - todays_date).total_seconds()
-                date_diff_days = int(round(date_diff_seconds / 86400))
-                if date_diff_days < lowest_days:
-                    lowest_days = date_diff_days
-
-    return lowest_days
-
+from timercontroler import timerController
+from helpers import *
+from builder import Builder
 
 def main():
     '''Main thread'''
+        # Setup our globals to use across nibbler and nibbler functions
+    global MORE_INFO_URL
+    global PATH_TO_APP
+    
+    nudge_path = os.path.dirname(os.path.realpath(__file__))
     opts, _ = get_parsed_options()
 
     if nudge_already_loaded():
@@ -380,10 +50,6 @@ def main():
     # Bail if we are not in a user session.
     if user_name in (None, 'loginwindow', '_mbsetupuser'):
         exit(0)
-
-    # Setup our globals to use across nibbler and nibbler functions
-    global MORE_INFO_URL
-    global PATH_TO_APP
 
     # Part for enhanced enforcement of Nudge
     nudge_dismissed_count = 0
@@ -488,6 +154,8 @@ def main():
     nudge_su_prefs = nudge_json.get('software_updates', [])
     update_minor = nudge_prefs.get('update_minor', False)
     update_minor_days = nudge_prefs.get('update_minor_days', 14)
+
+    nudge =  Builder(nudge_path, PATH_TO_APP, MORE_INFO_URL)
 
     # Start information
     nudgelog('Target OS version: %s ' % minimum_os_version)
@@ -629,30 +297,30 @@ def main():
         foundation_nsimage = NSImage.alloc().initWithData_(
             foundation_nsdata)
         if index == 0:
-            nudge.views['image.companylogo'].setImage_(foundation_nsimage)
+            nudge.nudge.views['image.companylogo'].setImage_(foundation_nsimage)
         else:
-            nudge.views['image.updatess'].setImage_(foundation_nsimage)
+            nudge.nudge.views['image.updatess'].setImage_(foundation_nsimage)
 
     # Attach all the nib buttons to functions
-    nudge.attach(button_update, 'button.update')
-    nudge.attach(button_moreinfo, 'button.moreinfo')
-    nudge.attach(button_ok, 'button.ok')
-    nudge.attach(button_understand, 'button.understand')
+    nudge.nudge.attach(nudge.button_update, 'button.update')
+    nudge.nudge.attach(nudge.button_moreinfo, 'button.moreinfo')
+    nudge.nudge.attach(nudge.button_ok, 'button.ok')
+    nudge.nudge.attach(nudge.button_understand, 'button.understand')
 
     # Setup the UI fields
-    nudge.views['field.titletext'].setStringValue_(main_title_text)
-    nudge.views['field.subtitletext'].setStringValue_(main_subtitle_text)
-    nudge.views['field.updatetext'].setStringValue_(paragraph_title_text)
-    nudge.views['field.paragraph1'].setStringValue_(paragraph1_text)
-    nudge.views['field.paragraph2'].setStringValue_(paragraph2_text)
-    nudge.views['field.paragraph3'].setStringValue_(paragraph3_text)
-    nudge.views['field.h1text'].setStringValue_(button_title_text)
-    nudge.views['field.h2text'].setStringValue_(button_sub_titletext)
+    nudge.nudge.views['field.titletext'].setStringValue_(main_title_text)
+    nudge.nudge.views['field.subtitletext'].setStringValue_(main_subtitle_text)
+    nudge.nudge.views['field.updatetext'].setStringValue_(paragraph_title_text)
+    nudge.nudge.views['field.paragraph1'].setStringValue_(paragraph1_text)
+    nudge.nudge.views['field.paragraph2'].setStringValue_(paragraph2_text)
+    nudge.nudge.views['field.paragraph3'].setStringValue_(paragraph3_text)
+    nudge.nudge.views['field.h1text'].setStringValue_(button_title_text)
+    nudge.nudge.views['field.h2text'].setStringValue_(button_sub_titletext)
 
     # Dynamically set username and serialnumber
-    nudge.views['field.username'].setStringValue_(str(user_name))
-    nudge.views['field.serialnumber'].setStringValue_(str(get_serial()))
-    nudge.views['field.updated'].setStringValue_('No')
+    nudge.nudge.views['field.username'].setStringValue_(str(user_name))
+    nudge.nudge.views['field.serialnumber'].setStringValue_(str(get_serial()))
+    nudge.nudge.views['field.updated'].setStringValue_('No')
 
     # Hide the MORE_INFO_URL if it's not set
     if not MORE_INFO_URL:
@@ -669,10 +337,10 @@ def main():
         date_diff_days = int(round(date_diff_seconds / 86400))
 
         if date_diff_seconds >= 0:
-            nudge.views['field.daysremaining'].setStringValue_(
+            nudge.nudge.views['field.daysremaining'].setStringValue_(
                 date_diff_days)
         else:
-            nudge.views['field.daysremaining'].setStringValue_(
+            nudge.nudge.views['field.daysremaining'].setStringValue_(
                 'Past date!')
 
         cut_off_warn = bool(date_diff_seconds < int(
@@ -680,18 +348,18 @@ def main():
 
         # Setup our timer controller
         timer_controller = timerController.new()
-        nudge.timer_controller = (
+        nudge.nudge.timer_controller = (
             timer_controller.
-            initWithDismissedCount_AcceptableApps_DismissalCountThreshold_(
-                nudge_dismissed_count, acceptable_apps, dismissal_count_threshold))
+            initWithDC_AA_DCT_NO_(nudge_dismissed_count, acceptable_apps,
+                dismissal_count_threshold, nudge))
 
         if date_diff_seconds <= 0:
             # If the cutoff date is over, get stupidly aggressive
 
             # Disable all buttons so the user cannot exit out of the
             # application, and have the Update Machine button appear
-            nudge.views['button.ok'].setHidden_(True)
-            nudge.views['button.understand'].setHidden_(True)
+            nudge.nudge.views['button.ok'].setHidden_(True)
+            nudge.nudge.views['button.understand'].setHidden_(True)
 
             # Bring back nudge to the foreground, every 10 seconds
             timer = float(timer_elapsed)
@@ -700,8 +368,8 @@ def main():
 
             # Disable all buttons so the user cannot exit out of the
             # application
-            nudge.views['button.ok'].setHidden_(True)
-            nudge.views['button.understand'].setHidden_(True)
+            nudge.nudge.views['button.ok'].setHidden_(True)
+            nudge.nudge.views['button.understand'].setHidden_(True)
 
             # Bring back nudge to the foreground, every 60 seconds
             # (1 minute)
@@ -712,7 +380,7 @@ def main():
 
             # Disable the ok button and require users to press understand
             # button first
-            nudge.views['button.ok'].setHidden_(True)
+            nudge.nudge.views['button.ok'].setHidden_(True)
 
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
@@ -724,7 +392,7 @@ def main():
 
             # Disable the ok button and require users to press understand
             # button first
-            nudge.views['button.ok'].setHidden_(True)
+            nudge.nudge.views['button.ok'].setHidden_(True)
 
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
@@ -735,36 +403,36 @@ def main():
             # don't be that aggressive
 
             # Only require the ok button to exit out of nudge
-            nudge.views['button.ok'].setHidden_(False)
-            nudge.views['button.understand'].setHidden_(True)
+            nudge.nudge.views['button.ok'].setHidden_(False)
+            nudge.nudge.views['button.understand'].setHidden_(True)
 
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 14,400 seconds (4 hours)
             timer = float(timer_initial)
 
-        nudge.timer = (
+        nudge.nudge.timer = (
             NSTimer
             .scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-                timer, nudge.timer_controller, 'activateWindow:', None, True))
+                timer, nudge.nudge.timer_controller, 'activateWindow:', None, True))
     else:
         # If you elect not to use a cutoff date, then the UI will only
         # appear one time per run, and only use the ok button
 
         # Hide the fields used for the cutoff date
-        nudge.views['field.daysremainingtext'].setHidden_(True)
-        nudge.views['field.daysremaining'].setHidden_(True)
+        nudge.nudge.views['field.daysremainingtext'].setHidden_(True)
+        nudge.nudge.views['field.daysremaining'].setHidden_(True)
 
         # Only require the ok button to exit out of nudge
-        nudge.views['button.ok'].setHidden_(False)
-        nudge.views['button.understand'].setHidden_(True)
+        nudge.nudge.views['button.ok'].setHidden_(False)
+        nudge.nudge.views['button.understand'].setHidden_(True)
 
         timer = float(timer_day_3)
         date_diff_seconds = 1000000
 
     # Use cut off dates, but don't use the timer functionality
     if no_timer:
-        nudge.timer.invalidate()
+        nudge.nudge.timer.invalidate()
         nudgelog('Timer invalidated!')
     else:
         nudgelog('Timer is set to %s' % str(timer))
@@ -774,8 +442,8 @@ def main():
     last_seen = pref('last_seen')
 
     # Set up our window controller and delegate
-    nudge.hidden = True
-    nudge.run()
+    nudge.nudge.hidden = True
+    nudge.nudge.run()
 
 
 if __name__ == '__main__':
