@@ -17,7 +17,6 @@ class timerController(NSObject):
         self.acceptable_apps = acceptable_apps
         self.dismissall_count_threshold = dismissal_count_threshold
         self.nudge = nudge_obj
-
         return self
 
     def activateWindow_(self, timer_obj):
@@ -37,7 +36,7 @@ class timerController(NSObject):
             if self.nudge_dismissed_count < self.dismissall_count_threshold:
                 nudgelog('Nudge dismissed count under threshold')
                 self.nudge_dismissed_count += 1
-                self.bring_nudge_to_forefront()
+                bring_nudge_to_forefront(nudge)
             else:
                 # Get more aggressive - new behavior
                 nudgelog('Nudge dismissed count over threshold')
@@ -63,19 +62,19 @@ class timerController(NSObject):
                         time.sleep(0.001)
                 # Another small sleep to ensure we can bring Nudge on top
                 time.sleep(0.5)
-                self.bring_nudge_to_forefront()
+                bring_nudge_to_forefront(nudge)
                 # Pretend to open the button and open the update mechanism
                 nudge.button_update(True)
 
-    def bring_nudge_to_forefront(self):
-        '''Brings nudge to the forefront - old behavior'''
-        nudgelog('Nudge not active - Activating to the foreground')
-        # We have to bring back python to the forefront since nibbler is a giant cheat
-        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
-        # Now bring the nudge window itself to the forefront
-        # Nibbler objects have a .win property (...should probably be .window)
-        # that contains a reference to the first NSWindow it finds
-        nudge.nudge.win.makeKeyAndOrderFront_(None)
+def bring_nudge_to_forefront(nudge):
+    '''Brings nudge to the forefront - old behavior'''
+    nudgelog('Nudge not active - Activating to the foreground')
+    # We have to bring back python to the forefront since nibbler is a giant cheat
+    NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+    # Now bring the nudge window itself to the forefront
+    # Nibbler objects have a .win property (...should probably be .window)
+    # that contains a reference to the first NSWindow it finds
+    nudge.nudge.win.makeKeyAndOrderFront_(None)
 
 if __name__ == '__main__':
     print('This is a library of support tools for the Nudge Tool.')
