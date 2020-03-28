@@ -47,3 +47,6 @@ class Builder(object):
         self.nudge.views['button.understand'].setHidden_(True)
         self.nudge.views['button.ok'].setHidden_(False)
         self.nudge.views['button.ok'].setEnabled_(True)
+
+if __name__ == '__main__':
+    print('This is a library of support tools for the Nudge Tool.')

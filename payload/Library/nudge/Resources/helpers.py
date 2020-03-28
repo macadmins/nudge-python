@@ -13,7 +13,7 @@ from CoreFoundation import (CFPreferencesAppSynchronize,
                             CFPreferencesCopyAppValue,
                             CFPreferencesSetAppValue)
 
-import objc 
+import objc
 import gurl
 
 def downloadfile(options):
@@ -232,3 +232,6 @@ def get_minimum_minor_update_days(update_minor_days, pending_apple_updates, nudg
                     lowest_days = date_diff_days
 
     return lowest_days
+
+if __name__ == '__main__':
+    print('This is a library of support tools for the Nudge Tool.')
