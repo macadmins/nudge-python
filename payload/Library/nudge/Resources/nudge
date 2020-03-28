@@ -33,10 +33,6 @@ from builder import Builder
 
 def main():
     '''Main thread'''
-        # Setup our globals to use across nibbler and nibbler functions
-    global MORE_INFO_URL
-    global PATH_TO_APP
-    
     nudge_path = os.path.dirname(os.path.realpath(__file__))
     opts, _ = get_parsed_options()
 
@@ -131,7 +127,7 @@ def main():
     minimum_os_sub_build_version = nudge_prefs.get('minimum_os_sub_build_version', '10A00')
     minimum_os_version = nudge_prefs.get('minimum_os_version', '10.14.6')
     minimum_os_version_major = minimum_os_version.rsplit('.', 1)[0]
-    MORE_INFO_URL = nudge_prefs.get('more_info_url', False)
+    more_info_url = nudge_prefs.get('more_info_url', False)
     no_timer = nudge_prefs.get('no_timer', False)
     paragraph1_text = nudge_prefs.get('paragraph1_text',
         'A fully up-to-date device is required to ensure that IT can your accurately protect your computer.')
@@ -141,7 +137,7 @@ def main():
         'To begin the update, simply click on the button below and follow the provided steps.')
     paragraph_title_text = nudge_prefs.get('paragraph_title_text',
         'A security update is required on your machine.')
-    PATH_TO_APP = nudge_prefs.get('path_to_app',
+    path_to_app = nudge_prefs.get('path_to_app',
         '/Applications/Install macOS Mojave.app')
     screenshot_path = nudge_prefs.get('screenshot_path', 'update_ss.png')
     LOCAL_URL_FOR_UPGRADE = nudge_prefs.get('local_url_for_upgrade', False)
@@ -155,7 +151,7 @@ def main():
     update_minor = nudge_prefs.get('update_minor', False)
     update_minor_days = nudge_prefs.get('update_minor_days', 14)
 
-    nudge =  Builder(nudge_path, PATH_TO_APP, MORE_INFO_URL)
+    nudge =  Builder(nudge_path, path_to_app, more_info_url)
 
     # Start information
     nudgelog('Target OS version: %s ' % minimum_os_version)
@@ -210,11 +206,11 @@ def main():
         # This is a major upgrade now and needs the app. We shouldn't
         # perform minor updates.
         if LOCAL_URL_FOR_UPGRADE:
-            # Reassign the global PATH_TO_APP with the specified local
+            # Reassign the global path_to_app with the specified local
             # upgrade URL
-            PATH_TO_APP = LOCAL_URL_FOR_UPGRADE
+            path_to_app = LOCAL_URL_FOR_UPGRADE
         else:
-            if not os.path.exists(PATH_TO_APP):
+            if not os.path.exists(path_to_app):
                 nudgelog('Update application not found! Exiting...')
                 exit(1)
     else:
@@ -238,7 +234,7 @@ def main():
                 # There are pending updates
                 first_seen = pref('first_seen')
                 last_seen = pref('last_seen')
-                PATH_TO_APP = update_app_path()
+                path_to_app = update_app_path()
 
                 apple_sus_prefs_path = '/Library/Preferences/com.apple.SoftwareUpdate'
 
@@ -322,8 +318,8 @@ def main():
     nudge.nudge.views['field.serialnumber'].setStringValue_(str(get_serial()))
     nudge.nudge.views['field.updated'].setStringValue_('No')
 
-    # Hide the MORE_INFO_URL if it's not set
-    if not MORE_INFO_URL:
+    # Hide the more_info_url if it's not set
+    if not more_info_url:
         nudge.views['button.moreinfo'].setHidden_(True)
 
     minimum_minor_update_days = get_minimum_minor_update_days(update_minor_days, pending_apple_updates(), nudge_su_prefs)
@@ -348,7 +344,7 @@ def main():
 
         # Setup our timer controller
         timer_controller = timerController.new()
-        nudge.nudge.timer_controller = (
+        nudge.timer_controller = (
             timer_controller.
             initWithDC_AA_DCT_NO_(nudge_dismissed_count, acceptable_apps,
                 dismissal_count_threshold, nudge))
@@ -411,10 +407,10 @@ def main():
             # 14,400 seconds (4 hours)
             timer = float(timer_initial)
 
-        nudge.nudge.timer = (
+        nudge.timer = (
             NSTimer
             .scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-                timer, nudge.nudge.timer_controller, 'activateWindow:', None, True))
+                timer, nudge.timer_controller, 'activateWindow:', None, True))
     else:
         # If you elect not to use a cutoff date, then the UI will only
         # appear one time per run, and only use the ok button
@@ -432,7 +428,7 @@ def main():
 
     # Use cut off dates, but don't use the timer functionality
     if no_timer:
-        nudge.nudge.timer.invalidate()
+        nudge.timer.invalidate()
         nudgelog('Timer invalidated!')
     else:
         nudgelog('Timer is set to %s' % str(timer))
