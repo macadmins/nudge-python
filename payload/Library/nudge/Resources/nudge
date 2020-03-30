@@ -16,7 +16,6 @@ from urllib.error import URLError
 from urllib.request import urlopen
 from urllib.parse import unquote, urlparse
 
-import gurl
 import objc
 
 from AppKit import NSImage
@@ -27,7 +26,8 @@ from Foundation import (NSURL, NSBundle, NSData, NSDate, NSLog,
 from nudgelib.timercontroler import timerController
 from nudgelib.helpers import *
 from nudgelib.builder import Builder
-from nudgelib.prefs import DEFAULT_PREFS, set_app_pref, app_pref
+from nudgelib.prefs import (DEFAULT_PREFS, Preferences,
+                            set_app_pref, app_pref)
 from nudgelib.constants import (BUNDLE_ID, ACCEPTABLE_APPS,
                        NUDGE_DISMISSED_COUNT)
 
