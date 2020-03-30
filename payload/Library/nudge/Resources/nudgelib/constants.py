@@ -15,4 +15,4 @@ ACCEPTABLE_APPS = [
 NUDGE_DISMISSED_COUNT = 0
 
 if __name__ == '__main__':
-    print('This is a library of support tools for the Munki Suite.')
+    print('This is a library of support tools for the Nudge Tool.')
