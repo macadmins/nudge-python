@@ -16,6 +16,8 @@ from CoreFoundation import (CFPreferencesAppSynchronize,
 import objc
 import gurl
 
+from prefs import pref
+
 def downloadfile(options):
     '''download file with gurl'''
     connection = gurl.Gurl.alloc().initWithOptions_(options)
@@ -63,11 +65,17 @@ def downloadfile(options):
     if connection.redirection != []:
         nudgelog('Redirection: %s ' % (str(connection.redirection)))
 
-def get_console_username_info():
+def get_console_username():
     '''Uses Apple's SystemConfiguration framework to get the current
     console username'''
-    return SCDynamicStoreCopyConsoleUser(None, None, None)
+    user_name, current_user_uid, _ = SCDynamicStoreCopyConsoleUser(None, None, None)
+    return user_name
 
+def bail():
+    '''Bail if we are not in a user session'''
+    user_name = get_console_username()
+    if user_name in (None, 'loginwindow', '_mbsetupuser'):
+        return True
 
 def get_os_sub_build_version():
     '''Return sub build of macOS'''
@@ -100,7 +108,8 @@ def get_parsed_options():
     usage = '%prog [options]'
     options = optparse.OptionParser(usage=usage)
     options.add_option('--headers', help=('Optional: Auth headers'))
-    options.add_option('--jsonurl', help=('Required: URL to json file.'))
+    options.add_option('--jsonurl', help=('Optional: URL to json file.'))
+    options.add_option('--config', help=('Optional: Get Nudge config info.'))
     return options.parse_args()
 
 
@@ -148,32 +157,6 @@ def nudgelog(text):
     '''logger for nudge'''
     NSLog('[Nudge] ' + text)
 
-def pref(pref_name, domain='com.erikng.nudge'):
-    """Returns a preference from the specified domain.
-
-    Uses CoreFoundation.
-
-    Args:
-      pref_name: str preference name to get.
-    """
-    pref_value = CFPreferencesCopyAppValue(
-        pref_name, domain)
-    if isinstance(pref_value, NSDate):
-        # convert NSDate/CFDates to strings
-        pref_value = str(pref_value)
-    return pref_value
-
-
-def set_pref(pref_name, value, domain='com.erikng.nudge'):
-    """Sets a value in Preferences.
-    Uses CoreFoundation.
-    Args:
-       pref_name: str preference name to set.
-       value: value to set it to.
-    """
-    CFPreferencesSetAppValue(pref_name, value, domain)
-    CFPreferencesAppSynchronize(domain)
-
 def download_apple_updates():
     '''Download everything Softwareupdate has to offer'''
 
@@ -193,7 +176,7 @@ def pending_apple_updates():
     '''Pending apple updates
     Returns a dict of pending updates'''
 
-    return pref('RecommendedUpdates', 'com.apple.SoftwareUpdate')
+    return pref('RecommendedUpdates', BUNDLE_ID='com.apple.SoftwareUpdate')
 
 
 def update_app_path():
