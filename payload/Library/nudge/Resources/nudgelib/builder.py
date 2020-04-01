@@ -1,16 +1,18 @@
-import os
 import webbrowser
 import subprocess
 
-from nibbler import *
-from helpers import nudgelog
+from os.path import dirname, realpath, join
+
+from .nibbler import *
+from .helpers import nudgelog
 
 class Builder(object):
     '''Class which build the nudge tool'''
 
-    def __init__(self, nudge_path, path_to_app, more_info_url):
+    def __init__(self, path_to_app, more_info_url):
         try:
-            self.nudge = Nibbler(os.path.join(nudge_path, 'nudge.nib'))
+            nudge_path = dirname(dirname(realpath(__file__)))
+            self.nudge = Nibbler(join(nudge_path, 'nudge.nib'))
         except IOError:
             nudgelog('Unable to load nudge nib file!')
             exit(20)
