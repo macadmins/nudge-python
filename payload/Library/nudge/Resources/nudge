@@ -3,13 +3,13 @@
 '''nudge - python wrapper for major OS updates.'''
 import json
 import optparse
-import os
 import random
 import shutil
 import subprocess
 import tempfile
 import time
 import webbrowser
+from os.path import dirname, realpath, join, isfile, exists
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 from urllib.error import URLError
@@ -27,222 +27,58 @@ from nudgelib.timercontroler import timerController
 from nudgelib.helpers import *
 from nudgelib.builder import Builder
 from nudgelib.prefs import (DEFAULT_PREFS, Preferences,
-                            set_app_pref, app_pref)
+                            set_app_pref, app_pref, pref)
 from nudgelib.constants import (BUNDLE_ID, ACCEPTABLE_APPS,
                        NUDGE_DISMISSED_COUNT)
+from nudgelib.config import *
+from nudgelib.nudgelogic import *
 
 def main():
     '''Main thread'''
-    opts, _ = get_parsed_options()
-
     if nudge_already_loaded():
-        nudgelog('nudge already loaded!')
         exit(0)
 
-    # Bail if we are not in a user session
-    if bail():
+    if not_in_userland():
         exit(0)
-
-    # Figure out the local path of nudge
-    nudge_path = os.path.dirname(os.path.realpath(__file__))
-
-    # local json path - if it exists already, let's assume someone is bundling
-    # it with their package. Otherwise check for it and use gurl.
-    json_path = os.path.join(nudge_path, 'nudge.json')
-    cleanup = True
-    if os.path.isfile(json_path):
-        cleanup = False
-        json_raw = open(json_path).read()
-    else:
-        tmp_dir = tempfile.mkdtemp()
-        tmp_json = os.path.join(tmp_dir, 'nudge.json')
-        json_path = tmp_json
-        json_raw = None
-        if opts.jsonurl:
-            json_url = opts.jsonurl
-            # json data for gurl download
-            json_data = {
-                'url': json_url,
-                'file': json_path,
-                'name': 'nudge.json'
-            }
-
-            # Grab auth headers if they exist and update the json_data dict.
-            if opts.headers:
-                headers = {'Authorization': opts.headers}
-                json_data.update({'additional_headers': headers})
-
-            url_parse = urlparse(json_url)
-            if url_parse.scheme == 'file':
-                # File resources should be handled natively
-                try:
-                    json_raw = urlopen(json_url).read()
-                except URLError as err:
-                    nudgelog(err)
-                    shutil.rmtree(tmp_dir)
-                    exit(1)
-            else:
-                # If the file doesn't exist, grab it and wait half a second to save.
-                while not os.path.isfile(json_path):
-                    nudgelog(('Starting download: %s' % (unquote(
-                        json_data['url']))))
-                    downloadfile(json_data)
-                    time.sleep(0.5)
-        else:
-            nudgelog('nudge JSON file not specified!')
-            shutil.rmtree(tmp_dir)
-            exit(1)
-
-    # Load up file to grab all the items.
-    if json_raw:
-        nudge_json = json.loads(json_raw)
-    else:
-        nudge_json = json.loads(open(json_path).read())
-
+    
     # Setup nudge preferences and all defaults if not set
-    nudge_prefs = nudge_json['preferences']
-    prefs = DEFAULT_PREFS
-
-    for item in nudge_prefs: prefs[item] = nudge_prefs[item]
-    prefs['minimum_os_version_major'] = prefs['minimum_os_version'].rsplit('.', 1)[0]
-    prefs['nudge_su_prefs'] = nudge_json.get('software_updates', [])
+    config_type, sidecar = get_config_type()
+    nudge_config = Config(config_type, sidecar)
+    nudge_prefs = nudge_config.get_config()
 
     # Bulding nudge object
-    nudge =  Builder(nudge_path, prefs['path_to_app'], prefs['more_info_url'])
+    nudge =  Builder(nudge_prefs['path_to_app'], nudge_prefs['more_info_url'])
 
     # Start information
-    nudgelog('Target OS version: %s ' % prefs['minimum_os_version'])
-    if prefs['update_minor']:
-        if prefs['minimum_os_sub_build_version'] == '10A00':
+    ##################################
+    nudgelog('Target OS version: %s ' % nudge_prefs['minimum_os_version'])
+    if nudge_prefs['update_minor']:
+        if nudge_prefs['minimum_os_sub_build_version'] == '10A00':
             prefs['update_minor'] = False
         else:
-            nudgelog('Target OS subversion: %s' % prefs['minimum_os_sub_build_version'])
-    nudgelog('Dismissal count threshold: %s ' % prefs['dismissal_count_threshold'])
+            nudgelog('Target OS subversion: %s' % nudge_prefs['minimum_os_sub_build_version'])
+    nudgelog('Dismissal count threshold: %s ' % nudge_prefs['dismissal_count_threshold'])
+    ##################################
 
+    random_delay(nudge_prefs['random_delay'])
 
-    # cleanup the tmp stuff now
-    if cleanup:
-        nudgelog('Cleaning up temporary files...')
-        shutil.rmtree(tmp_dir)
-
-    if prefs['random_delay']:
-        delay = random.randint(1,1200)
-        nudgelog('Delaying run for {} seconds...'.format(delay))
-        time.sleep(delay)
-
-    # If the admin put '10.14' and not '10.14.0' the major version will be '10'
-    # so make sure this error doesn't happen and the comparison doesn't fail.
-    if '.' not in prefs['minimum_os_version_major']:
-        prefs['minimum_os_version_major'] = prefs['minimum_os_version']
-
-    os_version = get_os_version()
-    os_version_major = get_os_version_major()
-    os_version_sub_build = get_os_sub_build_version()
-
-    # Example 10.14.6 (18G103) >=  10.14.6 (18G84)
-    if os_version_sub_build >= LooseVersion(prefs['minimum_os_sub_build_version']) and prefs['update_minor']:
-        nudgelog('OS version sub build is higher or equal to the minimum threshold: %s' % str(os_version_sub_build))
-        exit(0)
-    # Example: 10.14.6 >= 10.14.6
-    elif os_version >= LooseVersion(prefs['minimum_os_version']) and not prefs['update_minor']:
-        nudgelog('OS version is higher or equal to the minimum threshold: %s' % str(os_version))
-        exit(0)
-    # Example: 10.14/10.14.0 >= 10.14
-    elif os_version_major >= LooseVersion(prefs['minimum_os_version_major']) and not prefs['update_minor']:
-        nudgelog('OS major version is higher or equal to the minimum threshold and minor updates not enabled: %s ' % str(os_version))
-        exit(0)
-    else:
-        nudgelog('OS version is below the minimum threshold: %s' % str(os_version))
-        if prefs['update_minor'] and LooseVersion(prefs['minimum_os_sub_build_version']) > os_version_sub_build:
-            nudgelog('OS version is below the minimum threshold subversion: %s' % str(os_version_sub_build))
-
-    minor_updates_required = False
+    threshold_by_version(nudge_prefs['minimum_os_sub_build_version'],
+                         nudge_prefs['minimum_os_version'],
+                         nudge_prefs['minimum_os_version_major'],
+                         nudge_prefs['update_minor'])
 
     # Start main logic on major and minor upgrades
-    if LooseVersion(prefs['minimum_os_version_major']) > os_version_major:
-        # This is a major upgrade now and needs the app. We shouldn't
-        # perform minor updates.
-        if prefs['local_url_for_upgrade']:
-            # Reassign the global path_to_app with the specified local
-            # upgrade URL
-            prefs['path_to_app'] = prefs['local_url_for_upgrade']
-        else:
-            if not os.path.exists(prefs['path_to_app']):
-                nudgelog('Update application not found! Exiting...')
-                exit(1)
-    else:
-        # do minor version stuff
-        if prefs['update_minor']:
-            nudgelog('Checking for minor updates.')
-            swupd_output = download_apple_updates()
-            if not swupd_output:
-                nudgelog('Could not run softwareupdate')
-                # Exit 0 as we might be offline
-                # TODO: Check if we're offline to exit with the
-                # appropriate code
-                exit(0)
-
-            if pending_apple_updates() == [] or pending_apple_updates() is None:
-                nudgelog('No Software updates to install')
-                set_app_pref('first_seen', None)
-                set_app_pref('last_seen', None)
-                exit(0)
-            else:
-                # There are pending updates
-                first_seen = app_pref('first_seen')
-                last_seen = app_pref('last_seen')
-                prefs['path_to_app'] = update_app_path()
-
-                apple_sus_prefs_path = '/Library/Preferences/com.apple.SoftwareUpdate'
-
-                if app_pref('AutomaticCheckEnabled', apple_sus_prefs_path) and \
-                app_pref('AutomaticDownload', apple_sus_prefs_path) and \
-                app_pref('AutomaticallyInstallMacOSUpdates', apple_sus_prefs_path):
-                    # Only care about updates needing a restart
-                    swupd_output = subprocess.check_output(['/usr/sbin/softwareupdate', '-la'])
-                    for line in swupd_output.splitlines():
-                        if b'restart' in line.lower():
-                            minor_updates_required = True
-                            break
-                else:
-                    # required preferences for background updates aren't present, notify for all
-                    minor_updates_required = True
-
-                if not minor_updates_required:
-                    nudgelog('Only updates that can be installed in the background pending.')
-                    set_app_pref('first_seen', None)
-                    set_app_pref('last_seen', None)
-                    exit()
-                # todo: Work out how long the user has to install it
-                # todays_date = datetime.utcnow()
-                # first_seen_strp = datetime.strptime(first_seen, '%Y-%m-%d %H:%M:%S +0000')
-                # date_diff_seconds = (first_seen_strp - todays_date).total_seconds()
-                # date_diff_days = int(round(date_diff_seconds / 86400))
-                # print date_diff_days
-
-                # Allow admin to not show nudge all the time
-                if prefs['days_between_notifications'] > 0:
-                    if first_seen and last_seen:
-                        today = datetime.utcnow()
-                        last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
-                        difference = today - last_seen_strp
-                        nudgelog(str(difference.days))
-                        if difference.days < prefs['days_between_notifications']:
-                            nudgelog('Last seen date is within notification threshold: %s ' % str(prefs['days_between_notifications']))
-                            exit(0)
-
-                if not first_seen:
-                    set_app_pref('first_seen', datetime.utcnow())
-                    first_seen = app_pref('first_seen')
+    logic = NudgeLogic(nudge_prefs)
+    nudge_prefs = logic.start()
 
     # Use the paths defined, or default to pngs in the same local path of
     # nudge
-    for index, path in enumerate([prefs['logo_path'], prefs['screenshot_path']]):
+    for index, path in enumerate([nudge_prefs['logo_path'], nudge_prefs['screenshot_path']]):
         if path in ('company_logo.png', 'update_ss.png'):
-            local_png_path = os.path.join(
+            local_png_path = join(
                 nudge_path, path).replace(' ', '%20')
         else:
-            local_png_path = os.path.join(path).replace(' ', '%20')
+            local_png_path = join(path).replace(' ', '%20')
         foundation_nsurl_path = NSURL.URLWithString_(
             'file:' + local_png_path)
         foundation_nsdata = NSData.dataWithContentsOfURL_(
@@ -261,14 +97,14 @@ def main():
     nudge.nudge.attach(nudge.button_understand, 'button.understand')
 
     # Setup the UI fields
-    nudge.nudge.views['field.titletext'].setStringValue_(prefs['main_title_text'])
-    nudge.nudge.views['field.subtitletext'].setStringValue_(prefs['main_subtitle_text'])
-    nudge.nudge.views['field.updatetext'].setStringValue_(prefs['paragraph_title_text'])
-    nudge.nudge.views['field.paragraph1'].setStringValue_(prefs['paragraph1_text'])
-    nudge.nudge.views['field.paragraph2'].setStringValue_(prefs['paragraph2_text'])
-    nudge.nudge.views['field.paragraph3'].setStringValue_(prefs['paragraph3_text'])
-    nudge.nudge.views['field.h1text'].setStringValue_(prefs['button_title_text'])
-    nudge.nudge.views['field.h2text'].setStringValue_(prefs['button_sub_titletext'])
+    nudge.nudge.views['field.titletext'].setStringValue_(nudge_prefs['main_title_text'])
+    nudge.nudge.views['field.subtitletext'].setStringValue_(nudge_prefs['main_subtitle_text'])
+    nudge.nudge.views['field.updatetext'].setStringValue_(nudge_prefs['paragraph_title_text'])
+    nudge.nudge.views['field.paragraph1'].setStringValue_(nudge_prefs['paragraph1_text'])
+    nudge.nudge.views['field.paragraph2'].setStringValue_(nudge_prefs['paragraph2_text'])
+    nudge.nudge.views['field.paragraph3'].setStringValue_(nudge_prefs['paragraph3_text'])
+    nudge.nudge.views['field.h1text'].setStringValue_(nudge_prefs['button_title_text'])
+    nudge.nudge.views['field.h2text'].setStringValue_(nudge_prefs['button_sub_titletext'])
 
     # Dynamically set username and serialnumber
     nudge.nudge.views['field.username'].setStringValue_(str(get_console_username()))
@@ -276,18 +112,15 @@ def main():
     nudge.nudge.views['field.updated'].setStringValue_('No')
 
     # Hide the more_info_url if it's not set
-    if not prefs['more_info_url']:
+    if not nudge_prefs['more_info_url']:
         nudge.views['button.moreinfo'].setHidden_(True)
 
-    minimum_minor_update_days = get_minimum_minor_update_days(prefs['update_minor_days'],
-                                                              pending_apple_updates(),
-                                                              prefs['nudge_su_prefs'])
-    if prefs['cut_off_date'] or (minor_updates_required and minimum_minor_update_days > 0):
+    if nudge_prefs['cut_off_date'] or (pending_apple_updates()):
         todays_date = datetime.utcnow()
-        if not prefs['cut_off_date']: # fix for minor updates logic
-            cut_off_date_strp = todays_date + timedelta(days=minimum_minor_update_days)
+        if not nudge_prefs['cut_off_date']: # fix for minor updates logic
+            cut_off_date_strp = todays_date + timedelta(days=nudge_prefs['update_minor_days'])
         else:
-            cut_off_date_strp = datetime.strptime(prefs['cut_off_date'], '%Y-%m-%d-%H:%M')
+            cut_off_date_strp = datetime.strptime(nudge_prefs['cut_off_date'], '%Y-%m-%d-%H:%M')
         date_diff_seconds = (cut_off_date_strp - todays_date).total_seconds()
         date_diff_days = int(round(date_diff_seconds / 86400))
 
@@ -299,14 +132,14 @@ def main():
                 'Past date!')
 
         cut_off_warn = bool(date_diff_seconds < int(
-            prefs['cut_off_date_warning']) * 86400)
+            nudge_prefs['cut_off_date_warning']) * 86400)
 
         # Setup our timer controller
         timer_controller = timerController.new()
         nudge.timer_controller = (
             timer_controller.
             initWithDC_AA_DCT_NO_(NUDGE_DISMISSED_COUNT, ACCEPTABLE_APPS,
-                prefs['dismissal_count_threshold'], nudge))
+                nudge_prefs['dismissal_count_threshold'], nudge))
 
         if date_diff_seconds <= 0:
             # If the cutoff date is over, get stupidly aggressive
@@ -317,7 +150,7 @@ def main():
             nudge.nudge.views['button.understand'].setHidden_(True)
 
             # Bring back nudge to the foreground, every 10 seconds
-            timer = float(prefs['timer_elapsed'])
+            timer = float(nudge_prefs['timer_elapsed'])
         elif date_diff_seconds <= 3600:
             # If the cutoff date is within one hour, get very agressive
 
@@ -328,7 +161,7 @@ def main():
 
             # Bring back nudge to the foreground, every 60 seconds
             # (1 minute)
-            timer = float(prefs['timer_final'])
+            timer = float(nudge_prefs['timer_final'])
         elif date_diff_seconds <= 86400:
             # If the cutoff date is within 86,400 seconds (24 hours), start
             # getting more agressive
@@ -340,7 +173,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 600 seconds (10 minutes)
-            timer = float(prefs['timer_day_1'])
+            timer = float(nudge_prefs['timer_day_1'])
         elif cut_off_warn:
             # If the cutoff date is within 259,200 seconds (72 hours) or
             # whatever the admin set, start getting a bit more agressive
@@ -352,7 +185,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 7,200 seconds (2 hours)
-            timer = float(prefs['timer_day_3'])
+            timer = float(nudge_prefs['timer_day_3'])
         else:
             # If the cutoff date is over 259,200 seconds (72 hours),
             # don't be that aggressive
@@ -364,7 +197,7 @@ def main():
             # If the user doesn't close out of nudge, we want it to
             # reappear - bring back nudge to the foreground, every
             # 14,400 seconds (4 hours)
-            timer = float(prefs['timer_initial'])
+            timer = float(nudge_prefs['timer_initial'])
 
         nudge.timer = (
             NSTimer
@@ -386,7 +219,7 @@ def main():
         date_diff_seconds = 1000000
 
     # Use cut off dates, but don't use the timer functionality
-    if prefs['no_timer']:
+    if nudge_prefs['no_timer']:
         nudge.timer.invalidate()
         nudgelog('Timer invalidated!')
     else:

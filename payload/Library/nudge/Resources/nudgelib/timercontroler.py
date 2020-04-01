@@ -4,7 +4,7 @@ from urllib.parse import unquote, urlparse
 
 from AppKit import NSWorkspace, NSApplication
 from Foundation import NSObject
-from helpers import nudgelog
+from .helpers import nudgelog
 
 class timerController(NSObject):
     '''Thanks to frogor for help in figuring this part out'''
