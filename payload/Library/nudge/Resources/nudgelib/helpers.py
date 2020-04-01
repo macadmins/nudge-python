@@ -1,5 +1,7 @@
 import os
 import sys
+import random
+import time
 import subprocess
 import optparse
 import platform
@@ -14,9 +16,9 @@ from CoreFoundation import (CFPreferencesAppSynchronize,
                             CFPreferencesSetAppValue)
 
 import objc
-import gurl
+from . import gurl
 
-from prefs import pref
+from .prefs import pref
 
 def downloadfile(options):
     '''download file with gurl'''
@@ -71,10 +73,11 @@ def get_console_username():
     user_name, current_user_uid, _ = SCDynamicStoreCopyConsoleUser(None, None, None)
     return user_name
 
-def bail():
+def not_in_userland():
     '''Bail if we are not in a user session'''
     user_name = get_console_username()
     if user_name in (None, 'loginwindow', '_mbsetupuser'):
+        nudgelog('not in a user session')
         return True
 
 def get_os_sub_build_version():
@@ -150,6 +153,7 @@ def nudge_already_loaded():
             if bytes(current_pid, 'utf-8') in line:
                 pass
             else:
+                nudgelog('nudge already loaded!')
                 return True
     return False
 
@@ -186,6 +190,12 @@ def update_app_path():
     else:
         return 'macappstore://showUpdatesPage'
 
+def update_need_restart():
+    swupd_output = subprocess.check_output(['/usr/sbin/softwareupdate', '-la'])
+    for line in swupd_output.splitlines():
+        if b'restart' in line.lower():
+            return True
+    return False
 
 def pkgregex(pkgpath):
     '''regular expression for pkg'''
@@ -196,25 +206,30 @@ def pkgregex(pkgpath):
     except AttributeError as IndexError:
         return pkgpath
 
+def random_delay(delay=True):
+    if delay:
+       rand_delay = random.randint(1,1200)
+       nudgelog('Delaying run for {} seconds...'.format(delay))
+       time.sleep(rand_delay)
 
-def get_minimum_minor_update_days(update_minor_days, pending_apple_updates, nudge_su_prefs):
-    '''Lowest number of days before something is forced'''
-    if pending_apple_updates == [] or pending_apple_updates is None:
-        return update_minor_days
-
-    lowest_days = update_minor_days
-    todays_date = datetime.utcnow()
-    for item in nudge_su_prefs:
-        for update in pending_apple_updates:
-            if str(item['name']) == str(update['Product Key']):
-                nudgelog('{} has a forced date'.format(update['Product Key']))
-                force_date_strp = datetime.strptime(item['force_install_date'], '%Y-%m-%d-%H:%M')
-                date_diff_seconds = (force_date_strp - todays_date).total_seconds()
-                date_diff_days = int(round(date_diff_seconds / 86400))
-                if date_diff_days < lowest_days:
-                    lowest_days = date_diff_days
-
-    return lowest_days
+def threshold_by_version(min_build, min_os, min_major, update_minor):
+    full = get_os_version()
+    major = get_os_version_major()
+    build = get_os_sub_build_version()
+    if build >= LooseVersion(min_build) and update_minor:
+        nudgelog(f'OS build is higher or equal to the minimum threshold: {str(build)}')
+        sys.exit(0)
+    if full >= LooseVersion(min_os) and not update_minor:
+        nudgelog(f'OS version is higher or equal to the minimum threshold: {str(full)}')
+        sys.exit(0)
+    if major >= LooseVersion(min_major) and not update_minor:
+        part1 = 'OS major version is higher or equal to the minimum threshold'
+        part2 = 'minor updates not enabled' 
+        nudgelog(f'{part1} and {part2}: {str(full)}')
+        sys.exit(0)
+    nudgelog(f'OS version is below the minimum threshold: {str(full)}')
+    if update_minor and LooseVersion(min_build) > build:
+        nudgelog(f'OS version is below the minimum threshold subversion: {str(build)}')
 
 if __name__ == '__main__':
     print('This is a library of support tools for the Nudge Tool.')
