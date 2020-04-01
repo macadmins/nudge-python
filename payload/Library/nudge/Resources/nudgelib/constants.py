@@ -13,6 +13,10 @@ ACCEPTABLE_APPS = [
     'org.python.python'
 ]
 NUDGE_DISMISSED_COUNT = 0
+APPLE_SUS_PREFS_PATH = '/Library/Preferences/com.apple.SoftwareUpdate'
+APPLE_SUS_PREFS = ('AutomaticCheckEnabled',
+                   'AutomaticDownload',
+                   'AutomaticallyInstallMacOSUpdates')
 
 if __name__ == '__main__':
     print('This is a library of support tools for the Nudge Tool.')
