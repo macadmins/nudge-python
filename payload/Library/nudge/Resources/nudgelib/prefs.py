@@ -24,9 +24,7 @@ Adapted for Nudge Tool by Joaquin Cabrerizo on 2020-03-27.
 # No name 'Foo' in module 'Bar' warnings. Disable them.
 # pylint: disable=E0611
 from Foundation import (NSDate,
-                        CFPreferencesAppSynchronize,
                         CFPreferencesAppValueIsForced,
-                        CFPreferencesCopyAppValue,
                         CFPreferencesCopyKeyList,
                         CFPreferencesCopyValue,
                         CFPreferencesSetValue,
@@ -41,12 +39,12 @@ from CoreFoundation import (CFPreferencesAppSynchronize,
 
 # pylint: enable=E0611
 
-from constants import BUNDLE_ID
+from .constants import BUNDLE_ID
 
 DEFAULT_PREFS = {
     "button_title_text": "Ready to start the update?",
     "button_sub_titletext": "Click on the button below.",
-    "cut_off_date": False,
+    "cut_off_date": False, #set it in the form "YYYY:MM:DD:hh:mm" or leave it as False
     "cut_off_date_warning": 3,
     "days_between_notifications": 0,
     "dismissal_count_threshold": 9999999,
@@ -64,14 +62,13 @@ DEFAULT_PREFS = {
     "paragraph_title_text": "A security update is required on your machine.",
     "path_to_app": "/Applications/Install macOS Mojave.app",
     "screenshot_path": "update_ss.png",
-    "local_url_for_upgrade": False,
+    "local_url_for_upgrade": False, #set it as a string munki://detail-<item name> for instance
     "timer_day_1": 600,
     "timer_day_3": 7200,
     "timer_elapsed": 10,
     "timer_final": 60,
     "timer_initial": 14400,
     "random_delay": False,
-    "nudge_su_prefs": [],
     "update_minor": False,
     "update_minor_days": 14
 }
@@ -137,6 +134,9 @@ class Preferences(object):
         """Return whether a preference is available or not"""
         return self.__contains__(pref_name)
 
+    def is_managed(self, pref_name):
+        """Return if a preference is managed or not"""
+        return CFPreferencesAppValueIsForced(pref_name, self.bundle_id)
 
 class ManagedInstallsPreferences(Preferences):
     """Preferences which are read using 'normal' OS X preferences precedence:
@@ -241,9 +241,10 @@ def app_pref(pref_name):
         # discoverability
         if pref_value is not None:
             set_app_pref(pref_name, pref_value)
-    if isinstance(pref_value, NSDate):
-        # convert NSDate/CFDates to strings
-        pref_value = str(pref_value)
+
+        if isinstance(pref_value, NSDate):
+            # convert NSDate/CFDates to strings
+            pref_value = str(pref_value)
     return pref_value
 
 
