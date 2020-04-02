@@ -19,6 +19,7 @@ import objc
 from . import gurl
 
 from .prefs import pref
+from .constants import MIN_BUILD
 
 def downloadfile(options):
     '''download file with gurl'''
@@ -209,7 +210,7 @@ def pkgregex(pkgpath):
 def random_delay(delay=True):
     if delay:
        rand_delay = random.randint(1,1200)
-       nudgelog('Delaying run for {} seconds...'.format(delay))
+       nudgelog(f'Delaying run for {rand_delay} seconds...')
        time.sleep(rand_delay)
 
 def threshold_by_version(min_build, min_os, min_major, update_minor):
@@ -230,6 +231,19 @@ def threshold_by_version(min_build, min_os, min_major, update_minor):
     nudgelog(f'OS version is below the minimum threshold: {str(full)}')
     if update_minor and LooseVersion(min_build) > build:
         nudgelog(f'OS version is below the minimum threshold subversion: {str(build)}')
+
+def start_info(minimum_os_version, update_minor,
+               minimum_os_sub_build_version,
+               dismissal_count_threshold):
+    nudgelog(f'Target OS version: {minimum_os_version}')
+    if update_minor:
+        if minimum_os_sub_build_version == MIN_BUILD:
+            update_minor = False
+        else:
+            nudgelog(f'Target OS subversion: {minimum_os_sub_build_version}')
+    nudgelog(f'Dismissal count threshold: {dismissal_count_threshold}')
+    return update_minor
+
 
 if __name__ == '__main__':
     print('This is a library of support tools for the Nudge Tool.')
