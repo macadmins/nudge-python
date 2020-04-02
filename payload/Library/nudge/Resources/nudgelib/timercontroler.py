@@ -6,7 +6,7 @@ from AppKit import NSWorkspace, NSApplication
 from Foundation import NSObject
 from .helpers import nudgelog
 
-class timerController(NSObject):
+class TimerController(NSObject):
     '''Thanks to frogor for help in figuring this part out'''
     def initWithDC_AA_DCT_NO_(self,
                               nudge_dismissed_count,
