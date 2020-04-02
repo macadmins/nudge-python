@@ -1,37 +1,12 @@
 #!/Library/nudge/Python.framework/Versions/3.8/bin/python3
 # -*- coding: utf-8 -*-
 '''nudge - python wrapper for major OS updates.'''
-import json
-import optparse
-import random
-import shutil
-import subprocess
-import tempfile
-import time
-import webbrowser
-from os.path import dirname, realpath, join, isfile, exists
-from datetime import datetime, timedelta
-from distutils.version import LooseVersion
-from urllib.error import URLError
-from urllib.request import urlopen
-from urllib.parse import unquote, urlparse
 
-import objc
-
-from AppKit import NSImage
-
-from Foundation import (NSURL, NSBundle, NSData, NSDate, NSLog,
-                        NSObject, NSString, NSTimer)
-
-from nudgelib.timercontroler import timerController
 from nudgelib.helpers import *
-from nudgelib.builder import Builder
-from nudgelib.prefs import (DEFAULT_PREFS, Preferences,
-                            set_app_pref, app_pref, pref)
-from nudgelib.constants import (BUNDLE_ID, ACCEPTABLE_APPS,
-                       NUDGE_DISMISSED_COUNT)
 from nudgelib.config import *
-from nudgelib.nudgelogic import *
+from nudgelib.builder import Builder
+from nudgelib.nudgelogic import NudgeLogic
+from nudgelib.ux import UX
 
 def main():
     '''Main thread'''
@@ -41,24 +16,16 @@ def main():
     if not_in_userland():
         exit(0)
     
-    # Setup nudge preferences and all defaults if not set
     config_type, sidecar = get_config_type()
     nudge_config = Config(config_type, sidecar)
     nudge_prefs = nudge_config.get_config()
 
-    # Bulding nudge object
-    nudge =  Builder(nudge_prefs['path_to_app'], nudge_prefs['more_info_url'])
+    nibbler =  Builder(nudge_prefs['path_to_app'], nudge_prefs['more_info_url'])
 
-    # Start information
-    ##################################
-    nudgelog('Target OS version: %s ' % nudge_prefs['minimum_os_version'])
-    if nudge_prefs['update_minor']:
-        if nudge_prefs['minimum_os_sub_build_version'] == '10A00':
-            prefs['update_minor'] = False
-        else:
-            nudgelog('Target OS subversion: %s' % nudge_prefs['minimum_os_sub_build_version'])
-    nudgelog('Dismissal count threshold: %s ' % nudge_prefs['dismissal_count_threshold'])
-    ##################################
+    nudge_prefs['update_minor'] = start_info(nudge_prefs['minimum_os_version'],
+                                             nudge_prefs['update_minor'],
+                                             nudge_prefs['minimum_os_sub_build_version'],
+                                             nudge_prefs['dismissal_count_threshold'])
 
     random_delay(nudge_prefs['random_delay'])
 
@@ -67,172 +34,12 @@ def main():
                          nudge_prefs['minimum_os_version_major'],
                          nudge_prefs['update_minor'])
 
-    # Start main logic on major and minor upgrades
     logic = NudgeLogic(nudge_prefs)
     nudge_prefs = logic.start()
 
-    # Use the paths defined, or default to pngs in the same local path of
-    # nudge
-    for index, path in enumerate([nudge_prefs['logo_path'], nudge_prefs['screenshot_path']]):
-        if path in ('company_logo.png', 'update_ss.png'):
-            local_png_path = join(
-                nudge_path, path).replace(' ', '%20')
-        else:
-            local_png_path = join(path).replace(' ', '%20')
-        foundation_nsurl_path = NSURL.URLWithString_(
-            'file:' + local_png_path)
-        foundation_nsdata = NSData.dataWithContentsOfURL_(
-            foundation_nsurl_path)
-        foundation_nsimage = NSImage.alloc().initWithData_(
-            foundation_nsdata)
-        if index == 0:
-            nudge.nudge.views['image.companylogo'].setImage_(foundation_nsimage)
-        else:
-            nudge.nudge.views['image.updatess'].setImage_(foundation_nsimage)
-
-    # Attach all the nib buttons to functions
-    nudge.nudge.attach(nudge.button_update, 'button.update')
-    nudge.nudge.attach(nudge.button_moreinfo, 'button.moreinfo')
-    nudge.nudge.attach(nudge.button_ok, 'button.ok')
-    nudge.nudge.attach(nudge.button_understand, 'button.understand')
-
-    # Setup the UI fields
-    nudge.nudge.views['field.titletext'].setStringValue_(nudge_prefs['main_title_text'])
-    nudge.nudge.views['field.subtitletext'].setStringValue_(nudge_prefs['main_subtitle_text'])
-    nudge.nudge.views['field.updatetext'].setStringValue_(nudge_prefs['paragraph_title_text'])
-    nudge.nudge.views['field.paragraph1'].setStringValue_(nudge_prefs['paragraph1_text'])
-    nudge.nudge.views['field.paragraph2'].setStringValue_(nudge_prefs['paragraph2_text'])
-    nudge.nudge.views['field.paragraph3'].setStringValue_(nudge_prefs['paragraph3_text'])
-    nudge.nudge.views['field.h1text'].setStringValue_(nudge_prefs['button_title_text'])
-    nudge.nudge.views['field.h2text'].setStringValue_(nudge_prefs['button_sub_titletext'])
-
-    # Dynamically set username and serialnumber
-    nudge.nudge.views['field.username'].setStringValue_(str(get_console_username()))
-    nudge.nudge.views['field.serialnumber'].setStringValue_(str(get_serial()))
-    nudge.nudge.views['field.updated'].setStringValue_('No')
-
-    # Hide the more_info_url if it's not set
-    if not nudge_prefs['more_info_url']:
-        nudge.views['button.moreinfo'].setHidden_(True)
-
-    if nudge_prefs['cut_off_date'] or (pending_apple_updates()):
-        todays_date = datetime.utcnow()
-        if not nudge_prefs['cut_off_date']: # fix for minor updates logic
-            cut_off_date_strp = todays_date + timedelta(days=nudge_prefs['update_minor_days'])
-        else:
-            cut_off_date_strp = datetime.strptime(nudge_prefs['cut_off_date'], '%Y-%m-%d-%H:%M')
-        date_diff_seconds = (cut_off_date_strp - todays_date).total_seconds()
-        date_diff_days = int(round(date_diff_seconds / 86400))
-
-        if date_diff_seconds >= 0:
-            nudge.nudge.views['field.daysremaining'].setStringValue_(
-                date_diff_days)
-        else:
-            nudge.nudge.views['field.daysremaining'].setStringValue_(
-                'Past date!')
-
-        cut_off_warn = bool(date_diff_seconds < int(
-            nudge_prefs['cut_off_date_warning']) * 86400)
-
-        # Setup our timer controller
-        timer_controller = timerController.new()
-        nudge.timer_controller = (
-            timer_controller.
-            initWithDC_AA_DCT_NO_(NUDGE_DISMISSED_COUNT, ACCEPTABLE_APPS,
-                nudge_prefs['dismissal_count_threshold'], nudge))
-
-        if date_diff_seconds <= 0:
-            # If the cutoff date is over, get stupidly aggressive
-
-            # Disable all buttons so the user cannot exit out of the
-            # application, and have the Update Machine button appear
-            nudge.nudge.views['button.ok'].setHidden_(True)
-            nudge.nudge.views['button.understand'].setHidden_(True)
-
-            # Bring back nudge to the foreground, every 10 seconds
-            timer = float(nudge_prefs['timer_elapsed'])
-        elif date_diff_seconds <= 3600:
-            # If the cutoff date is within one hour, get very agressive
-
-            # Disable all buttons so the user cannot exit out of the
-            # application
-            nudge.nudge.views['button.ok'].setHidden_(True)
-            nudge.nudge.views['button.understand'].setHidden_(True)
-
-            # Bring back nudge to the foreground, every 60 seconds
-            # (1 minute)
-            timer = float(nudge_prefs['timer_final'])
-        elif date_diff_seconds <= 86400:
-            # If the cutoff date is within 86,400 seconds (24 hours), start
-            # getting more agressive
-
-            # Disable the ok button and require users to press understand
-            # button first
-            nudge.nudge.views['button.ok'].setHidden_(True)
-
-            # If the user doesn't close out of nudge, we want it to
-            # reappear - bring back nudge to the foreground, every
-            # 600 seconds (10 minutes)
-            timer = float(nudge_prefs['timer_day_1'])
-        elif cut_off_warn:
-            # If the cutoff date is within 259,200 seconds (72 hours) or
-            # whatever the admin set, start getting a bit more agressive
-
-            # Disable the ok button and require users to press understand
-            # button first
-            nudge.nudge.views['button.ok'].setHidden_(True)
-
-            # If the user doesn't close out of nudge, we want it to
-            # reappear - bring back nudge to the foreground, every
-            # 7,200 seconds (2 hours)
-            timer = float(nudge_prefs['timer_day_3'])
-        else:
-            # If the cutoff date is over 259,200 seconds (72 hours),
-            # don't be that aggressive
-
-            # Only require the ok button to exit out of nudge
-            nudge.nudge.views['button.ok'].setHidden_(False)
-            nudge.nudge.views['button.understand'].setHidden_(True)
-
-            # If the user doesn't close out of nudge, we want it to
-            # reappear - bring back nudge to the foreground, every
-            # 14,400 seconds (4 hours)
-            timer = float(nudge_prefs['timer_initial'])
-
-        nudge.timer = (
-            NSTimer
-            .scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-                timer, nudge.timer_controller, 'activateWindow:', None, True))
-    else:
-        # If you elect not to use a cutoff date, then the UI will only
-        # appear one time per run, and only use the ok button
-
-        # Hide the fields used for the cutoff date
-        nudge.nudge.views['field.daysremainingtext'].setHidden_(True)
-        nudge.nudge.views['field.daysremaining'].setHidden_(True)
-
-        # Only require the ok button to exit out of nudge
-        nudge.nudge.views['button.ok'].setHidden_(False)
-        nudge.nudge.views['button.understand'].setHidden_(True)
-
-        timer = float(timer_day_3)
-        date_diff_seconds = 1000000
-
-    # Use cut off dates, but don't use the timer functionality
-    if nudge_prefs['no_timer']:
-        nudge.timer.invalidate()
-        nudgelog('Timer invalidated!')
-    else:
-        nudgelog('Timer is set to %s' % str(timer))
-
-    # Set last_seen pref
-    set_app_pref('last_seen', datetime.utcnow())
-    last_seen = app_pref('last_seen')
-
-    # Set up our window controller and delegate
-    nudge.nudge.hidden = True
-    nudge.nudge.run()
-
+    ux = UX(nibbler, nudge_prefs)
+    ux.build()
+    ux.run()
 
 if __name__ == '__main__':
     main()
