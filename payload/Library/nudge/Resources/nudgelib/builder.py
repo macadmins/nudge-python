@@ -11,8 +11,8 @@ class Builder(object):
 
     def __init__(self, path_to_app, more_info_url):
         try:
-            nudge_path = dirname(dirname(realpath(__file__)))
-            self.nudge = Nibbler(join(nudge_path, 'nudge.nib'))
+            self.nudge_path = dirname(dirname(realpath(__file__)))
+            self.nudge = Nibbler(join(self.nudge_path, 'nudge.nib'))
         except IOError:
             nudgelog('Unable to load nudge nib file!')
             exit(20)
