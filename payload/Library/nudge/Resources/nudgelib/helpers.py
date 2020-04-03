@@ -187,7 +187,7 @@ def pending_apple_updates():
 def update_app_path():
     software_updates_prefpane = '/System/Library/PreferencePanes/SoftwareUpdate.prefPane'
     if os.path.exists(software_updates_prefpane):
-        return 'file://{}'.format(software_updates_prefpane)
+        return f'file://{software_updates_prefpane}'
     else:
         return 'macappstore://showUpdatesPage'
 
