@@ -6,3 +6,4 @@ config.json
 .mypy_cache
 Pipfile*
 payload/Library/nudge/Python.framework/
+payload/Library/nudge/Resources/nudge.json
