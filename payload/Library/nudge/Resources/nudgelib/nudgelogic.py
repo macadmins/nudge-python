@@ -31,8 +31,7 @@ class NudgeLogic(object):
             self._check_local_url()
         else:
             self._check_updates_availability()
-            self._minor_updates_required()
-            _only_background_updates(self.minor_updates_required)
+            _only_background_updates(self.minor_updates_required())
             self._no_nudge_all_time()
         return self._update_nudgeprefs()
         
@@ -53,9 +52,9 @@ class NudgeLogic(object):
         self.last_seen = app_pref('last_seen')
         self.path_to_app = update_app_path()
         if _all_apple_sus_prefs():
-            self.minor_updates_required = update_need_restart()
+            return update_need_restart()
         else:
-            self.minor_updates_required = True
+            return True
 
     def _no_nudge_all_time(self):
         if (self.days_between_notif > 0 and
