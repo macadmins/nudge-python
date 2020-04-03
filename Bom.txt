@@ -6,39 +6,15 @@
 ./Library/nudge/Logs	40755	0/0
 ./Library/nudge/Logs/.gitignore	100755	0/0	14	838015408
 ./Library/nudge/Resources	40755	0/0
-./Library/nudge/Resources/__pycache__	40755	0/0
-./Library/nudge/Resources/__pycache__/builder.cpython-38.pyc	100644	0/0	2201	1229109114
-./Library/nudge/Resources/__pycache__/const.cpython-38.pyc	100644	0/0	431	1348422152
-./Library/nudge/Resources/__pycache__/constants.cpython-38.pyc	100644	0/0	1416	2730313385
-./Library/nudge/Resources/__pycache__/gurl.cpython-38.pyc	100644	0/0	18989	4253920037
-./Library/nudge/Resources/__pycache__/helpers.cpython-38.pyc	100644	0/0	7277	388421142
-./Library/nudge/Resources/__pycache__/nibbler.cpython-38.pyc	100644	0/0	4233	3874695164
-./Library/nudge/Resources/__pycache__/preferences.cpython-38.pyc	100644	0/0	9489	2220185203
-./Library/nudge/Resources/__pycache__/prefs.cpython-38.pyc	100644	0/0	10396	126303423
-./Library/nudge/Resources/__pycache__/timercontroler.cpython-38.pyc	100644	0/0	3026	4008320136
-./Library/nudge/Resources/__pycache__/wrappers.cpython-38.pyc	100644	0/0	2883	3492122534
 ./Library/nudge/Resources/company_logo.png	100755	0/0	16622	2197199182
 ./Library/nudge/Resources/nudge	100755	0/0	1453	2409992793
-./Library/nudge/Resources/nudge.json	100644	0/0	1366	2253134327
+./Library/nudge/Resources/nudge.json	100644	0/0	1366	2029334451
 ./Library/nudge/Resources/nudge.nib	40755	0/0
 ./Library/nudge/Resources/nudge.nib/._keyedobjects.nib	100644	0/0	0	0
 ./Library/nudge/Resources/nudge.nib/designable.nib	100644	0/0	23707	907792184
 ./Library/nudge/Resources/nudge.nib/keyedobjects.nib	100644	0/0	18750	699364113
 ./Library/nudge/Resources/nudgelib	40755	0/0
 ./Library/nudge/Resources/nudgelib/__init__.py	100644	0/0	0	4294967295
-./Library/nudge/Resources/nudgelib/__pycache__	40755	0/0
-./Library/nudge/Resources/nudgelib/__pycache__/__init__.cpython-38.pyc	100644	0/0	180	1041813891
-./Library/nudge/Resources/nudgelib/__pycache__/builder.cpython-38.pyc	100644	0/0	2398	2519713425
-./Library/nudge/Resources/nudgelib/__pycache__/config.cpython-38.pyc	100644	0/0	4897	4234469392
-./Library/nudge/Resources/nudgelib/__pycache__/constants.cpython-38.pyc	100644	0/0	1993	609607733
-./Library/nudge/Resources/nudgelib/__pycache__/gurl.cpython-38.pyc	100644	0/0	18998	4232973097
-./Library/nudge/Resources/nudgelib/__pycache__/helpers.cpython-38.pyc	100644	0/0	7916	984316960
-./Library/nudge/Resources/nudgelib/__pycache__/nibbler.cpython-38.pyc	100644	0/0	4242	186824278
-./Library/nudge/Resources/nudgelib/__pycache__/prefs.cpython-38.pyc	100644	0/0	10475	1324045913
-./Library/nudge/Resources/nudgelib/__pycache__/refactor.cpython-38.pyc	100644	0/0	2215	2061932442
-./Library/nudge/Resources/nudgelib/__pycache__/test.cpython-38.pyc	100644	0/0	274	4065859167
-./Library/nudge/Resources/nudgelib/__pycache__/timercontroler.cpython-38.pyc	100644	0/0	2633	1588822639
-./Library/nudge/Resources/nudgelib/__pycache__/ux.cpython-38.pyc	100644	0/0	7037	1816447420
 ./Library/nudge/Resources/nudgelib/builder.py	100644	0/0	1870	4105743749
 ./Library/nudge/Resources/nudgelib/config.py	100644	0/0	4457	175068570
 ./Library/nudge/Resources/nudgelib/const.py	100644	0/0	254	3459888688
@@ -50,6 +26,4 @@
 ./Library/nudge/Resources/nudgelib/prefs.py	100644	0/0	12958	1683965414
 ./Library/nudge/Resources/nudgelib/timercontroler.py	100644	0/0	4072	1702089655
 ./Library/nudge/Resources/nudgelib/ux.py	100644	0/0	7158	3817664986
-./Library/nudge/Resources/test.py	100744	0/0	6935	70518385
-./Library/nudge/Resources/testing.py	100644	0/0	0	4294967295
 ./Library/nudge/Resources/update_ss.png	100644	0/0	404022	3240320862
