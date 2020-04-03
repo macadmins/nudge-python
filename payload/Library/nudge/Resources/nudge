@@ -20,8 +20,6 @@ def main():
     nudge_config = Config(config_type, sidecar)
     nudge_prefs = nudge_config.get_config()
 
-    nibbler =  Builder(nudge_prefs['path_to_app'], nudge_prefs['more_info_url'])
-
     nudge_prefs['update_minor'] = start_info(nudge_prefs['minimum_os_version'],
                                              nudge_prefs['update_minor'],
                                              nudge_prefs['minimum_os_sub_build_version'],
@@ -36,6 +34,8 @@ def main():
 
     logic = NudgeLogic(nudge_prefs)
     nudge_prefs = logic.start()
+
+    nibbler =  Builder(nudge_prefs['path_to_app'], nudge_prefs['more_info_url'])
 
     ux = UX(nibbler, nudge_prefs)
     ux.build()
