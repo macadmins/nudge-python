@@ -48,7 +48,7 @@ if [[ $3 == "/" ]] ; then
     /bin/launchctl asuser "${console_user_uid}" /bin/launchctl list | /usr/bin/grep 'nudge'
     # Unload the agent so it can be triggered on re-install
     if [[ $? -eq 0 ]]; then
-      /bin/launchctl asuser "${console_user_uid}" /bin/launchctl unload "${launch_agent_plist_name}"
+      /bin/launchctl asuser "${console_user_uid}" /bin/launchctl unload "$3${launch_agent_base_path}${launch_agent_plist_name}"
     fi
     # Load the launch agent
     /bin/launchctl asuser "${console_user_uid}" /bin/launchctl load "$3${launch_agent_base_path}${launch_agent_plist_name}"
