@@ -41,6 +41,8 @@ Taking ownership of the file to not break git
 ```
 
 ## Important Information
+Since version 2.1 a new way of configuration have been included. From now on Profiles is the preferred method to configure Nudge. In addition to that the JSON file format has changed, you can see an [example JSON file](/example_config.json) in the code repository.
+
 You most certainly want to customize the following values:
 
 - `cut_off_date`
@@ -81,9 +83,9 @@ The following operating system and versions have been tested with the embedded p
 - 10.15
 
 ## Configuration File
-Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.
+Essentially every component of the UI is customizable, all through a JSON configuration file or a Profile (or MCX). An [example json file](/example_config.json) plus an [example profile](/example_profile.mobileconfig) are available within the code repository.
 
-### Defined config file
+### Defined JSON config file
 To define a configuration file, use the `jsonurl` script parameter.
 ```bash
 --jsonurl=https://fake.domain.com/path/to/config.json
@@ -93,7 +95,8 @@ To define a configuration file, use the `jsonurl` script parameter.
 ```
 
 ### Default config file
-If you prefer to deploy the configuration file to each client, it needs to be placed in the `Resources` directory and named `nudge.json`. If this file exists, `jsonurl` does not need to be set.
+A Profile will have precedence over any other method of configuration and in this case the `jsonurl` does not need to be set.
+If you prefer to deploy the JSON configuration file to each client, it needs to be placed in the `Resources` directory and named `nudge.json`. If this file exists, `jsonurl` does not need to be set either.
 
 ## Preferences
 A description of each preference is listed below.
