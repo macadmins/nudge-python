@@ -31,7 +31,7 @@ class NudgeLogic(object):
             self._check_local_url()
         else:
             self._check_updates_availability()
-            _only_background_updates(self.minor_updates_required())
+            _only_background_updates(self._minor_updates_required())
             self._no_nudge_all_time()
         return self._update_nudgeprefs()
         
