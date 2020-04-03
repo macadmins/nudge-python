@@ -8,7 +8,6 @@
 ./Library/nudge/Resources	40755	0/0
 ./Library/nudge/Resources/company_logo.png	100755	0/0	16622	2197199182
 ./Library/nudge/Resources/nudge	100755	0/0	1453	2409992793
-./Library/nudge/Resources/nudge.json	100644	0/0	1366	2029334451
 ./Library/nudge/Resources/nudge.nib	40755	0/0
 ./Library/nudge/Resources/nudge.nib/._keyedobjects.nib	100644	0/0	0	0
 ./Library/nudge/Resources/nudge.nib/designable.nib	100644	0/0	23707	907792184
