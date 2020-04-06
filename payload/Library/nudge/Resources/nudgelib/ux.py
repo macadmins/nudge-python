@@ -1,7 +1,7 @@
 from os.path import join
 from datetime import datetime, timedelta
 
-from Foundation import NSURL, NSData, NSTimer
+from Foundation import NSURL, NSData, NSTimer, NSDate
 from AppKit import NSImage
 
 from .constants import *
@@ -32,7 +32,7 @@ class UX(object):
         self._set_timer_logic()
         
     def run(self):
-        set_app_pref('last_seen', datetime.utcnow())
+        set_app_pref('last_seen', NSDate.new())
         self.nudge.hidden = True
         self.nudge.run()
 
