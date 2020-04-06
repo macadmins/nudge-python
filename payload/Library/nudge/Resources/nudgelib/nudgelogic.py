@@ -4,6 +4,8 @@ from distutils.version import LooseVersion
 from os.path import exists
 from datetime import datetime
 
+from Foundation import NSDate
+
 from .helpers import (nudgelog, 
                       download_apple_updates,
                       pending_apple_updates,
@@ -65,7 +67,7 @@ class NudgeLogic(object):
                 nudgelog(f'Last seen date is within notification threshold: {str(self.days_between_notif)}')
                 sys.exit(0)
         if not self.first_seen:
-            set_app_pref('first_seen', datetime.utcnow())
+            set_app_pref('first_seen', NSDate.new())
             self.first_seen = app_pref('first_seen')
     
     def _update_nudgeprefs(self):
