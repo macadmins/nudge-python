@@ -1,12 +1,19 @@
 #!/Library/nudge/Python.framework/Versions/3.8/bin/python3
 # -*- coding: utf-8 -*-
+
 '''nudge - python wrapper for major OS updates.'''
 
-from nudgelib.helpers import *
-from nudgelib.config import *
+from nudgelib.helpers import (nudge_already_loaded,
+                              not_in_userland,
+                              start_info,
+                              random_delay,
+                              threshold_by_version)
+from nudgelib.config import (get_config_type,
+                             Config)
 from nudgelib.builder import Builder
 from nudgelib.nudgelogic import NudgeLogic
 from nudgelib.ux import UX
+
 
 def main():
     '''Main thread'''
@@ -15,7 +22,7 @@ def main():
 
     if not_in_userland():
         exit(0)
-    
+
     config_type, sidecar = get_config_type()
     nudge_config = Config(config_type, sidecar)
     nudge_prefs = nudge_config.get_config()
@@ -35,11 +42,12 @@ def main():
     logic = NudgeLogic(nudge_prefs)
     nudge_prefs = logic.start()
 
-    nibbler =  Builder(nudge_prefs['path_to_app'], nudge_prefs['more_info_url'])
+    nibbler = Builder(nudge_prefs['path_to_app'], nudge_prefs['more_info_url'])
 
     ux = UX(nibbler, nudge_prefs)
     ux.build()
     ux.run()
+
 
 if __name__ == '__main__':
     main()

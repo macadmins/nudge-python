@@ -5,21 +5,20 @@ import time
 import subprocess
 import optparse
 import platform
-from datetime import datetime, timedelta
 import re
 from distutils.version import LooseVersion
 
+# pylint: disable=no-name-in-module
 from SystemConfiguration import SCDynamicStoreCopyConsoleUser
-from Foundation import NSBundle, NSString, NSLog, NSDate
-from CoreFoundation import (CFPreferencesAppSynchronize,
-                            CFPreferencesCopyAppValue,
-                            CFPreferencesSetAppValue)
+from Foundation import NSBundle, NSString, NSLog
+# pylint: enable=no-name-in-module
 
 import objc
 from . import gurl
 
 from .prefs import pref
 from .constants import MIN_BUILD
+
 
 def downloadfile(options):
     '''download file with gurl'''
@@ -31,7 +30,7 @@ def downloadfile(options):
         filename = options['name']
     except KeyError:
         nudgelog(('No \'name\' key defined in json for %s' %
-               pkgregex(options['file'])))
+                  pkgregex(options['file'])))
         sys.exit(1)
 
     try:
@@ -59,7 +58,7 @@ def downloadfile(options):
 
     if connection.error is not None:
         nudgelog(('Error: %s %s ' % (str(connection.error.code()),
-                                  str(connection.error.localizedDescription()))))
+                                     str(connection.error.localizedDescription()))))
         if connection.SSLerror:
             nudgelog('SSL error: %s ' % (str(connection.SSLerror)))
     if connection.response is not None:
@@ -68,11 +67,13 @@ def downloadfile(options):
     if connection.redirection != []:
         nudgelog('Redirection: %s ' % (str(connection.redirection)))
 
+
 def get_console_username():
     '''Uses Apple's SystemConfiguration framework to get the current
     console username'''
-    user_name, current_user_uid, _ = SCDynamicStoreCopyConsoleUser(None, None, None)
+    user_name, _, _ = SCDynamicStoreCopyConsoleUser(None, None, None)
     return user_name
+
 
 def not_in_userland():
     '''Bail if we are not in a user session'''
@@ -80,6 +81,8 @@ def not_in_userland():
     if user_name in (None, 'loginwindow', '_mbsetupuser'):
         nudgelog('not in a user session')
         return True
+    return False
+
 
 def get_os_sub_build_version():
     '''Return sub build of macOS'''
@@ -87,6 +90,7 @@ def get_os_sub_build_version():
     run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = run.communicate()[0]
     return LooseVersion(output.decode("utf-8").strip())
+
 
 def get_os_version():
     '''Return OS version.'''
@@ -102,9 +106,9 @@ def get_os_version_major():
         return LooseVersion(full_os.rsplit('.', 1)[0])
     elif len(full_os.split('.')) == 2:
         return LooseVersion(full_os)
-    else:
-        nudgelog('Cannot reliably determine OS major version. Exiting...')
-        exit(1)
+    nudgelog('Cannot reliably determine OS major version. Exiting...')
+    sys.exit(1)
+
 
 def get_parsed_options():
     '''Return the parsed options and args for this application.'''
@@ -124,8 +128,7 @@ def get_serial():
 
     functions = [("IOServiceGetMatchingService", b"II@"),
                  ("IOServiceMatching", b"@*"),
-                 ("IORegistryEntryCreateCFProperty", b"@I@@I"),
-                ]
+                 ("IORegistryEntryCreateCFProperty", b"@I@@I"), ]
 
     objc.loadBundleFunctions(IOKit_bundle, globals(), functions)
     # pylint: disable=undefined-variable
@@ -141,12 +144,13 @@ def get_serial():
     # pylint: enable=undefined-variable
     return serial
 
+
 def nudge_already_loaded():
     '''Check if nudge is already loaded'''
     nudge_string = '/Library/nudge/Resources/nudge'
     cmd = ['/bin/ps', '-o', 'pid', '-o', 'command']
     run = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, err = run.communicate()
+    output, _ = run.communicate()
     status = output.split(b'\n')
     current_pid = str(os.getpid())
     for line in status:
@@ -158,9 +162,11 @@ def nudge_already_loaded():
                 return True
     return False
 
+
 def nudgelog(text):
     '''logger for nudge'''
     NSLog('[Nudge] ' + text)
+
 
 def download_apple_updates():
     '''Download everything Softwareupdate has to offer'''
@@ -181,7 +187,7 @@ def pending_apple_updates():
     '''Pending apple updates
     Returns a dict of pending updates'''
 
-    return pref('RecommendedUpdates', BUNDLE_ID='com.apple.SoftwareUpdate')
+    return pref('RecommendedUpdates', bundle_id='com.apple.SoftwareUpdate')
 
 
 def update_app_path():
@@ -191,12 +197,14 @@ def update_app_path():
     else:
         return 'macappstore://showUpdatesPage'
 
+
 def update_need_restart():
     swupd_output = subprocess.check_output(['/usr/sbin/softwareupdate', '-la'])
     for line in swupd_output.splitlines():
         if b'restart' in line.lower():
             return True
     return False
+
 
 def pkgregex(pkgpath):
     '''regular expression for pkg'''
@@ -205,13 +213,15 @@ def pkgregex(pkgpath):
         pkgname = re.compile(r"[^/]+$").search(pkgpath).group(0)
         return pkgname
     except AttributeError as IndexError:
-        return pkgpath
+        return f'{pkgpath}: {IndexError}'
+
 
 def random_delay(delay=True):
     if delay:
-       rand_delay = random.randint(1,1200)
-       nudgelog(f'Delaying run for {rand_delay} seconds...')
-       time.sleep(rand_delay)
+        rand_delay = random.randint(1, 1200)
+        nudgelog(f'Delaying run for {rand_delay} seconds...')
+        time.sleep(rand_delay)
+
 
 def threshold_by_version(min_build, min_os, min_major, update_minor):
     full = get_os_version()
@@ -225,12 +235,13 @@ def threshold_by_version(min_build, min_os, min_major, update_minor):
         sys.exit(0)
     if major >= LooseVersion(min_major) and not update_minor:
         part1 = 'OS major version is higher or equal to the minimum threshold'
-        part2 = 'minor updates not enabled' 
+        part2 = 'minor updates not enabled'
         nudgelog(f'{part1} and {part2}: {str(full)}')
         sys.exit(0)
     nudgelog(f'OS version is below the minimum threshold: {str(full)}')
     if update_minor and LooseVersion(min_build) > build:
         nudgelog(f'OS version is below the minimum threshold subversion: {str(build)}')
+
 
 def start_info(minimum_os_version, update_minor,
                minimum_os_sub_build_version,
