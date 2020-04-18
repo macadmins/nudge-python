@@ -1,0 +1,21 @@
+[MESSAGES CONTROL]
+disable=
+    C0103,
+    R1722,
+    too-many-instance-attributes,
+    missing-module-docstring,
+    invalid-name,
+    expression-not-assigned,
+    unused-argument,
+    attribute-defined-outside-init,
+    missing-function-docstring,
+    too-few-public-methods,
+    fixme,
+    no-else-return,
+    deprecated-module,
+    no-member
+
+max-line-length=140
+
+[MASTER]
+ignore=gurl.py,nibbler.py,Python.framework

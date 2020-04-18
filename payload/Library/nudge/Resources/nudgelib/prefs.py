@@ -20,6 +20,7 @@ Preferences functions and classes used by the munki tools.
 
 Adapted for Nudge Tool by Joaquin Cabrerizo on 2020-03-27.
 """
+# pylint: disable=broad-except
 # PyLint cannot properly find names inside Cocoa libraries, so issues bogus
 # No name 'Foo' in module 'Bar' warnings. Disable them.
 # pylint: disable=E0611
@@ -44,7 +45,7 @@ from .constants import BUNDLE_ID
 DEFAULT_PREFS = {
     "button_title_text": "Ready to start the update?",
     "button_sub_titletext": "Click on the button below.",
-    "cut_off_date": False, #set it in the form "YYYY:MM:DD:hh:mm" or leave it as False
+    "cut_off_date": False,  # set it in the form "YYYY:MM:DD:hh:mm" or leave it as False
     "cut_off_date_warning": 3,
     "days_between_notifications": 0,
     "dismissal_count_threshold": 9999999,
@@ -53,16 +54,18 @@ DEFAULT_PREFS = {
     "main_title_text": "macOS Update",
     "minimum_os_sub_build_version": "10A00",
     "minimum_os_version": "10.14.6",
-    "minimum_os_version_major": None,  #'minimum_os_version'.rsplit('.', 1)[0]
+    "minimum_os_version_major": None,  # 'minimum_os_version'.rsplit('.', 1)[0]
     "more_info_url": False,
     "no_timer": False,
+    # pylint: disable=line-too-long
     "paragraph1_text": "A fully up-to-date device is required to ensure that IT can your accurately protect your computer.",
     "paragraph2_text": "If you do not update your computer, you may lose access to some items necessary for your day-to-day tasks.",
     "paragraph3_text": "To begin the update, simply click on the button below and follow the provided steps.",
+    # pylint: enable=line-too-long
     "paragraph_title_text": "A security update is required on your machine.",
     "path_to_app": "/Applications/Install macOS Mojave.app",
     "screenshot_path": "update_ss.png",
-    "local_url_for_upgrade": False, #set it as a string munki://detail-<item name> for instance
+    "local_url_for_upgrade": False,  # set it as a string munki://detail-<item name> for instance
     "timer_day_1": 600,
     "timer_day_3": 7200,
     "timer_elapsed": 10,
@@ -73,7 +76,8 @@ DEFAULT_PREFS = {
     "update_minor_days": 14
 }
 
-class Preferences(object):
+
+class Preferences():
     """Class which directly reads/writes Apple CF preferences."""
 
     def __init__(self, bundle_id, user=kCFPreferencesAnyUser):
@@ -126,10 +130,10 @@ class Preferences(object):
 
     def get(self, pref_name, default=None):
         """Return a preference or the default value"""
-        if not pref_name in self:
+        if pref_name not in self:
             return default
         return self.__getitem__(pref_name)
-    
+
     def contains(self, pref_name):
         """Return whether a preference is available or not"""
         return self.__contains__(pref_name)
@@ -137,6 +141,7 @@ class Preferences(object):
     def is_managed(self, pref_name):
         """Return if a preference is managed or not"""
         return CFPreferencesAppValueIsForced(pref_name, self.bundle_id)
+
 
 class ManagedInstallsPreferences(Preferences):
     """Preferences which are read using 'normal' OS X preferences precedence:
@@ -147,7 +152,6 @@ class ManagedInstallsPreferences(Preferences):
     Preferences are written to
         /Library/Preferences/ManagedInstalls.plist
     Since this code is usually run as root, ~ is root's home dir"""
-    # pylint: disable=too-few-public-methods
     def __init__(self):
         Preferences.__init__(self, 'ManagedInstalls', kCFPreferencesAnyUser)
 
@@ -161,7 +165,6 @@ class SecureManagedInstallsPreferences(Preferences):
     Preferences are written to
         ~/Library/Preferences/ByHost/ManagedInstalls.XXXX.plist
     Since this code is usually run as root, ~ is root's home dir"""
-    # pylint: disable=too-few-public-methods
     def __init__(self):
         Preferences.__init__(self, 'ManagedInstalls', kCFPreferencesCurrentUser)
 
@@ -188,6 +191,7 @@ def set_pref(pref_name, pref_value):
     except BaseException:
         pass
 
+
 def set_app_pref(pref_name, value):
     """Sets a value in Preferences.
     Uses CoreFoundation.
@@ -198,9 +202,10 @@ def set_app_pref(pref_name, value):
     CFPreferencesSetAppValue(pref_name, value, BUNDLE_ID)
     CFPreferencesAppSynchronize(BUNDLE_ID)
 
-def pref(pref_name, BUNDLE_ID=BUNDLE_ID):
+
+def pref(pref_name, bundle_id=BUNDLE_ID):
     """
-    Return a preference and whether exists or not. 
+    Return a preference and whether exists or not.
     Since this uses CFPreferencesCopyAppValue, Preferences
     can be defined several places. Precedence is:
         - MCX/configuration profile
@@ -210,7 +215,7 @@ def pref(pref_name, BUNDLE_ID=BUNDLE_ID):
         - .GlobalPreferences defined at various levels (ByHost, user, system)
         - default_prefs defined here.
     """
-    pref_value = CFPreferencesCopyAppValue(pref_name, BUNDLE_ID)
+    pref_value = CFPreferencesCopyAppValue(pref_name, bundle_id)
 
     if pref_value is None:
         pref_value = DEFAULT_PREFS.get(pref_name)
@@ -223,6 +228,7 @@ def pref(pref_name, BUNDLE_ID=BUNDLE_ID):
         # convert NSDate/CFDates to strings
         pref_value = str(pref_value)
     return pref_value
+
 
 def app_pref(pref_name):
     """Returns a preference from the specified domain.
@@ -260,34 +266,28 @@ def get_config_level(domain, pref_name, value):
                   '%s.xxxx.plist' % domain),
          'domain': domain,
          'user': kCFPreferencesCurrentUser,
-         'host': kCFPreferencesCurrentHost
-        },
+         'host': kCFPreferencesCurrentHost},
         {'file': '/var/root/Library/Preferences/%s.plist' % domain,
          'domain': domain,
          'user': kCFPreferencesCurrentUser,
-         'host': kCFPreferencesAnyHost
-        },
+         'host': kCFPreferencesAnyHost},
         {'file': ('/var/root/Library/Preferences/ByHost/'
                   '.GlobalPreferences.xxxx.plist'),
          'domain': '.GlobalPreferences',
          'user': kCFPreferencesCurrentUser,
-         'host': kCFPreferencesCurrentHost
-        },
+         'host': kCFPreferencesCurrentHost},
         {'file': '/var/root/Library/Preferences/.GlobalPreferences.plist',
          'domain': '.GlobalPreferences',
          'user': kCFPreferencesCurrentUser,
-         'host': kCFPreferencesAnyHost
-        },
+         'host': kCFPreferencesAnyHost},
         {'file': '/Library/Preferences/%s.plist' % domain,
          'domain': domain,
          'user': kCFPreferencesAnyUser,
-         'host': kCFPreferencesCurrentHost
-        },
+         'host': kCFPreferencesCurrentHost},
         {'file': '/Library/Preferences/.GlobalPreferences.plist',
          'domain': '.GlobalPreferences',
          'user': kCFPreferencesAnyUser,
-         'host': kCFPreferencesCurrentHost
-        },
+         'host': kCFPreferencesCurrentHost},
     ]
     for level in levels:
         if (value == CFPreferencesCopyValue(

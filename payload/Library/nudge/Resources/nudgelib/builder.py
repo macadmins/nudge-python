@@ -1,12 +1,14 @@
 import webbrowser
 import subprocess
+import sys
 
 from os.path import dirname, realpath, join
 
-from .nibbler import *
+from .nibbler import Nibbler
 from .helpers import nudgelog
 
-class Builder(object):
+
+class Builder():
     '''Class which build the nudge tool'''
 
     def __init__(self, path_to_app, more_info_url):
@@ -15,11 +17,10 @@ class Builder(object):
             self.nudge = Nibbler(join(self.nudge_path, 'nudge.nib'))
         except IOError:
             nudgelog('Unable to load nudge nib file!')
-            exit(20)
-        
+            sys.exit(20)
+
         self.path_to_app = path_to_app
         self.more_info_url = more_info_url
-
 
     def button_moreinfo(self):
         '''Open browser more info button'''
@@ -35,12 +36,10 @@ class Builder(object):
         cmd = ['/usr/bin/open', self.path_to_app]
         subprocess.Popen(cmd)
 
-
     def button_ok(self):
         '''Quit out of nudge if user hits the ok button'''
         nudgelog('User clicked on ok button - exiting application')
         self.nudge.quit()
-
 
     def button_understand(self):
         '''Add an extra button to force the user to read the dialog, prior to being
@@ -49,6 +48,7 @@ class Builder(object):
         self.nudge.views['button.understand'].setHidden_(True)
         self.nudge.views['button.ok'].setHidden_(False)
         self.nudge.views['button.ok'].setEnabled_(True)
+
 
 if __name__ == '__main__':
     print('This is a library of support tools for the Nudge Tool.')

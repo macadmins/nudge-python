@@ -1,10 +1,20 @@
+# pylint: disable=too-many-instance-attributes, missing-module-docstring
+# pylint: disable=invalid-name, expression-not-assigned
+
 from os.path import join
 from datetime import datetime, timedelta
 
+# pylint: disable=no-name-in-module
 from Foundation import NSURL, NSData, NSTimer, NSDate
 from AppKit import NSImage
+# pylint: enable=no-name-in-module
 
-from .constants import *
+from .constants import (DEFAULT_IMAGES, COMPANY_LOGO, UPDATESS,
+                        UI_NUDGE_PREFS, UI_FIELDS, USERNAME,
+                        SERIAL_NUMBER, UPDATED, MORE_INFO,
+                        DAYS_REMAINING, DAYS_REMAINING_TEXT,
+                        PAST_DATE, NUDGE_DISMISSED_COUNT,
+                        ACCEPTABLE_APPS, OK, UNDERSTAND, NO_TIMER)
 from .timercontroler import TimerController
 from .helpers import (get_console_username,
                       get_serial,
@@ -12,33 +22,37 @@ from .helpers import (get_console_username,
                       nudgelog)
 from .prefs import set_app_pref
 
-class UX(object):
+
+class UX():
+    '''Class that define the UX a user will have'''
     def __init__(self, builder_ojb, nudge_prefs):
         self.nibbler = builder_ojb
         self.nudge = self.nibbler.nudge
         self.nudge_path = self.nibbler.nudge_path
         self.nudge_prefs = nudge_prefs
         self.date_diff_seconds = 0
-        self.date_diff_seconds = 0
+        self.date_diff_days = 0
         self.cut_off_warn = False
         self.timer = 0
-    
+
     def build(self):
+        '''Function that will build the UX for the user'''
         self._set_images()
         self._set_buttons()
         self._set_static_fields()
         self._set_dynamic_fields()
         self._hide_more_info()
         self._set_timer_logic()
-        
+
     def run(self):
+        '''Function that will run nudge experience'''
         set_app_pref('last_seen', NSDate.new())
         self.nudge.hidden = True
         self.nudge.run()
 
     def _set_images(self):
         for index, path in enumerate([self.nudge_prefs['logo_path'],
-            self.nudge_prefs['screenshot_path']]):
+                                      self.nudge_prefs['screenshot_path']]):
             if path in DEFAULT_IMAGES:
                 local_png_path = join(
                     self.nudge_path, path).replace(' ', '%20')
@@ -54,7 +68,7 @@ class UX(object):
                 self.nudge.views[COMPANY_LOGO].setImage_(foundation_nsimage)
             else:
                 self.nudge.views[UPDATESS].setImage_(foundation_nsimage)
-    
+
     def _set_buttons(self):
         self.nudge.attach(self.nibbler.button_update, 'button.update')
         self.nudge.attach(self.nibbler.button_moreinfo, 'button.moreinfo')
@@ -74,7 +88,7 @@ class UX(object):
     def _hide_more_info(self):
         if not self.nudge_prefs['more_info_url']:
             self.nudge.views[MORE_INFO].setHidden_(True)
-    
+
     def _set_timer_logic(self):
         cut_off_date = self.nudge_prefs['cut_off_date']
         if cut_off_date or pending_apple_updates():
@@ -84,7 +98,7 @@ class UX(object):
             self._init_timer_controller()
             self.timer = self._determine_timer()()
             self.nibbler.timer = _set_Nibbler_timer(self.timer,
-                self.nibbler.timer_controller)
+                                                    self.nibbler.timer_controller)
         else:
             self._set_no_cutoff_date_ux()
         self._no_timer()
@@ -111,11 +125,11 @@ class UX(object):
         if hide:
             self.nudge.views[DAYS_REMAINING_TEXT].setHidden_(True)
             self.nudge.views[DAYS_REMAINING].setHidden_(True)
-    
+
     def _get_cut_off_warn(self):
         self.cut_off_warn = bool(self.date_diff_seconds < int(
             self.nudge_prefs['cut_off_date_warning']) * 86400)
-    
+
     def _init_timer_controller(self):
         dct = self.nudge_prefs['dismissal_count_threshold']
         timer_controller = TimerController.new()
@@ -129,14 +143,15 @@ class UX(object):
     def _determine_timer(self):
         condition_action = [(self.date_diff_seconds <= 0, self._get_stupidly_aggressive),
                             (self.date_diff_seconds <= 3600, self._get_very_aggressive),
-                            (self.date_diff_seconds <=86400, self._get_more_aggressive),
+                            (self.date_diff_seconds <= 86400, self._get_more_aggressive),
                             (self.cut_off_warn, self._get_aggressive),
                             (True, self._get_low_pressure)]
         for state in condition_action:
             condition = state[0]
             action = state[1]
-            if condition: 
+            if condition:
                 return action
+        return None
 
     def _get_low_pressure(self):
         self._set_buttons_hidden_state(False, True)
@@ -157,9 +172,10 @@ class UX(object):
     def _get_stupidly_aggressive(self):
         self._set_buttons_hidden_state()
         return float(self.nudge_prefs['timer_elapsed'])
-    
+
     def _set_buttons_hidden_state(self,
-        ok_button=True, understand_button=True):
+                                  ok_button=True,
+                                  understand_button=True):
         self.nudge.views[OK].setHidden_(ok_button)
         if understand_button is not None:
             self.nudge.views[UNDERSTAND].setHidden_(understand_button)
@@ -167,7 +183,7 @@ class UX(object):
     def _set_no_cutoff_date_ux(self):
         self._set_days_remaining(hide=True)
         self._set_buttons_hidden_state(False, True)
-    
+
     def _no_timer(self):
         if self.nudge_prefs['no_timer']:
             self.nibbler.timer.invalidate()
@@ -180,3 +196,7 @@ def _set_Nibbler_timer(timer, timer_controller):
     return (NSTimer
             .scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
                 timer, timer_controller, 'activateWindow:', None, True))
+
+
+if __name__ == '__main__':
+    print('This is a library of support tools for the Nudge Tool.')

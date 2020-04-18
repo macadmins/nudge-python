@@ -2,9 +2,13 @@ import time
 
 from urllib.parse import unquote, urlparse
 
+# pylint: disable=no-name-in-module
 from AppKit import NSWorkspace, NSApplication
 from Foundation import NSObject
+# pylint: enable=no-name-in-module
+
 from .helpers import nudgelog
+
 
 class TimerController(NSObject):
     '''Thanks to frogor for help in figuring this part out'''
@@ -28,7 +32,7 @@ class TimerController(NSObject):
         workspace = NSWorkspace.sharedWorkspace()
         currently_active = NSApplication.sharedApplication().isActive()
         frontmost_app = workspace.frontmostApplication().bundleIdentifier()
-        
+
         if not currently_active and frontmost_app not in self.acceptable_apps:
             nudgelog('Nudge or acceptable applications not currently active')
             # If this is the under max dismissed count, just bring nudge back to the forefront
@@ -48,12 +52,13 @@ class TimerController(NSObject):
                     app_bundle = str(app.bundleURL())
                     if app_bundle:
                         # The app bundle contains file://, quoted path and trailing slashes
-                        app_bundle_path = unquote(urlparse(app_bundle).path).rstrip('\/')
+                        app_bundle_path = unquote(urlparse(app_bundle).path).rstrip('/')
                         # Add Software Update pane or macOS upgrade app to acceptable app list
                         if app_bundle_path == nudge.path_to_app:
                             self.acceptable_apps.append(app_name)
                     else:
-                        # Some of the apps from NSWorkspace don't have bundles, so force empty string
+                        # Some of the apps from NSWorkspace don't have bundles,
+                        # so force empty string
                         app_bundle_path = ''
                     # Hide any apps that are not in acceptable list or are not the macOS upgrade app
                     if (app_name not in self.acceptable_apps) or (app_bundle_path != nudge.path_to_app):
@@ -66,6 +71,7 @@ class TimerController(NSObject):
                 # Pretend to open the button and open the update mechanism
                 nudge.button_update(True)
 
+
 def bring_nudge_to_forefront(nudge):
     '''Brings nudge to the forefront - old behavior'''
     nudgelog('Nudge not active - Activating to the foreground')
@@ -75,6 +81,7 @@ def bring_nudge_to_forefront(nudge):
     # Nibbler objects have a .win property (...should probably be .window)
     # that contains a reference to the first NSWindow it finds
     nudge.nudge.win.makeKeyAndOrderFront_(None)
+
 
 if __name__ == '__main__':
     print('This is a library of support tools for the Nudge Tool.')
