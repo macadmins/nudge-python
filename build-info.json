@@ -6,5 +6,5 @@
     "ownership": "recommended",
     "postinstall_action": "none",
     "suppress_bundle_relocation": true,
-    "version": "2.1"
+    "version": "2.1.1"
 }
