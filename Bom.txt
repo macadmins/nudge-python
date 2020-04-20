@@ -5,24 +5,22 @@
 ./Library/nudge	40755	0/0
 ./Library/nudge/Logs	40755	0/0
 ./Library/nudge/Logs/.gitignore	100755	0/0	14	838015408
-./Library/nudge/Resources	40755	0/0
 ./Library/nudge/Resources/company_logo.png	100755	0/0	16622	2197199182
-./Library/nudge/Resources/nudge	100755	0/0	1453	2409992793
+./Library/nudge/Resources/nudge	100755	0/0	1710	254873997
+./Library/nudge/Resources/nudge.json	100644	0/0	1366	2029334451
 ./Library/nudge/Resources/nudge.nib	40755	0/0
-./Library/nudge/Resources/nudge.nib/._keyedobjects.nib	100644	0/0	0	0
 ./Library/nudge/Resources/nudge.nib/designable.nib	100644	0/0	23707	907792184
 ./Library/nudge/Resources/nudge.nib/keyedobjects.nib	100644	0/0	18750	699364113
 ./Library/nudge/Resources/nudgelib	40755	0/0
 ./Library/nudge/Resources/nudgelib/__init__.py	100644	0/0	0	4294967295
-./Library/nudge/Resources/nudgelib/builder.py	100644	0/0	1870	4105743749
-./Library/nudge/Resources/nudgelib/config.py	100644	0/0	4457	175068570
-./Library/nudge/Resources/nudgelib/const.py	100644	0/0	254	3459888688
-./Library/nudge/Resources/nudgelib/constants.py	100644	0/0	1898	308951219
+./Library/nudge/Resources/nudgelib/builder.py	100644	0/0	1876	814373919
+./Library/nudge/Resources/nudgelib/config.py	100644	0/0	4589	2131139633
+./Library/nudge/Resources/nudgelib/constants.py	100644	0/0	1899	1672268513
 ./Library/nudge/Resources/nudgelib/gurl.py	100644	0/0	30055	934536547
-./Library/nudge/Resources/nudgelib/helpers.py	100644	0/0	8880	3397009863
+./Library/nudge/Resources/nudgelib/helpers.py	100644	0/0	8740	416175311
 ./Library/nudge/Resources/nudgelib/nibbler.py	100755	0/0	4552	2490287542
-./Library/nudge/Resources/nudgelib/nudgelogic.py	100644	0/0	4359	2787482443
-./Library/nudge/Resources/nudgelib/prefs.py	100644	0/0	12958	1683965414
-./Library/nudge/Resources/nudgelib/timercontroler.py	100644	0/0	4072	1702089655
-./Library/nudge/Resources/nudgelib/ux.py	100644	0/0	7158	3817664986
+./Library/nudge/Resources/nudgelib/nudgelogic.py	100644	0/0	4515	20103861
+./Library/nudge/Resources/nudgelib/prefs.py	100644	0/0	12916	731867847
+./Library/nudge/Resources/nudgelib/timercontroler.py	100644	0/0	4164	3062446062
+./Library/nudge/Resources/nudgelib/ux.py	100644	0/0	8067	3305549675
 ./Library/nudge/Resources/update_ss.png	100644	0/0	404022	3240320862
