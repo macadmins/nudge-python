@@ -239,7 +239,6 @@ def app_pref(pref_name):
       pref_name: str preference name to get.
     """
     pref_value = CFPreferencesCopyAppValue(pref_name, BUNDLE_ID)
-
     if pref_value is None:
         pref_value = DEFAULT_PREFS.get(pref_name)
         # we're using a default value. We'll write it out to
@@ -250,7 +249,10 @@ def app_pref(pref_name):
 
         if isinstance(pref_value, NSDate):
             # convert NSDate/CFDates to strings
-            pref_value = str(pref_value)
+            pref_value = str(str(pref_value))
+    if isinstance(pref_value, NSDate):
+        # convert NSDate/CFDates to strings
+        pref_value = str(str(pref_value))
     return pref_value
 
 
