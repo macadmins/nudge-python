@@ -5,6 +5,8 @@
 ./Library/nudge	40755	0/0
 ./Library/nudge/Logs	40755	0/0
 ./Library/nudge/Logs/.gitignore	100755	0/0	14	838015408
+./Library/nudge/Resources	40755	0/0
+./Library/nudge/Resources/._nudge.nib	40755	0/0	0	0
 ./Library/nudge/Resources/company_logo.png	100755	0/0	16622	2197199182
 ./Library/nudge/Resources/nudge	100755	0/0	1710	254873997
 ./Library/nudge/Resources/nudge.nib	40755	0/0
@@ -19,7 +21,7 @@
 ./Library/nudge/Resources/nudgelib/helpers.py	100644	0/0	8740	416175311
 ./Library/nudge/Resources/nudgelib/nibbler.py	100755	0/0	4552	2490287542
 ./Library/nudge/Resources/nudgelib/nudgelogic.py	100644	0/0	4515	20103861
-./Library/nudge/Resources/nudgelib/prefs.py	100644	0/0	12916	731867847
+./Library/nudge/Resources/nudgelib/prefs.py	100644	0/0	13045	1460467212
 ./Library/nudge/Resources/nudgelib/timercontroler.py	100644	0/0	4164	3062446062
 ./Library/nudge/Resources/nudgelib/ux.py	100644	0/0	8067	3305549675
 ./Library/nudge/Resources/update_ss.png	100644	0/0	404022	3240320862
