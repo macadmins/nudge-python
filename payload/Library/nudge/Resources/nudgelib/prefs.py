@@ -47,7 +47,7 @@ DEFAULT_PREFS = {
     "button_sub_titletext": "Click on the button below.",
     "cut_off_date": False,  # set it in the form "YYYY:MM:DD:hh:mm" or leave it as False
     "cut_off_date_warning": 3,
-    "days_between_notifications": 0,
+    "time_between_notifications": 0,
     "dismissal_count_threshold": 9999999,
     "logo_path": "company_logo.png",
     "main_subtitle_text": "A friendly reminder from your local IT team",

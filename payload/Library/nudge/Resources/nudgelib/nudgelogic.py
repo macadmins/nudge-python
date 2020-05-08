@@ -26,7 +26,7 @@ class NudgeLogic():
         self.local_url = nudge_prefs['local_url_for_upgrade']
         self.path_to_app = nudge_prefs['path_to_app']
         self.update_minor = nudge_prefs['update_minor']
-        self.days_between_notif = nudge_prefs['days_between_notifications']
+        self.time_between_notif = nudge_prefs['time_between_notifications']
         self.major_version = get_os_version_major()
         self.minor_updates_required = False
         self.first_seen = False
@@ -63,12 +63,12 @@ class NudgeLogic():
         return True
 
     def _no_nudge_all_time(self):
-        if (self.days_between_notif > 0 and self.first_seen and self.last_seen):
-            difference = _last_seen_vs_today(self.last_seen)
+        if (self.time_between_notif > 0 and self.first_seen and self.last_seen):
+            difference = _last_seen_vs_now(self.last_seen)
             nudgelog(str(difference.days))
-            if difference.days < self.days_between_notif:
+            if difference.seconds < self.time_between_notif:
                 info = 'Last seen date is within notification threshold'
-                nudgelog(f'{info}: {str(self.days_between_notif)}')
+                nudgelog(f'{info}: {str(self.time_between_notif)} seconds')
                 sys.exit(0)
         if not self.first_seen:
             set_app_pref('first_seen', NSDate.new())
@@ -79,7 +79,7 @@ class NudgeLogic():
         self.nudge_prefs['local_url_for_upgrade'] = self.local_url
         self.nudge_prefs['path_to_app'] = self.path_to_app
         self.nudge_prefs['update_minor'] = self.update_minor
-        self.nudge_prefs['days_between_notifications'] = self.days_between_notif
+        self.nudge_prefs['time_between_notifications'] = self.time_between_notif
         return self.nudge_prefs
 
 
@@ -114,7 +114,7 @@ def _only_background_updates(minor_updates_required):
         sys.exit()
 
 
-def _last_seen_vs_today(last_seen):
+def _last_seen_vs_now(last_seen):
     today = datetime.utcnow()
     last_seen_strp = datetime.strptime(last_seen, '%Y-%m-%d %H:%M:%S +0000')
     difference = today - last_seen_strp
