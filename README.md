@@ -4,7 +4,7 @@
 - Nudge, rather than trying to install updates, merely prompts users to install updates via an approved method (System Preferences, Munki, Jamf, etc.).
 - By default, Nudge will open every 30 minutes, at the 0 and 30 minute mark. This is because of the default launch agent. If you find this behavior too aggressive, please change the launch agent.
 - The timers are for if the user minimizes/hides the window. It will re-load the window into the foreground, taking precedence over any window.
-- If you want a certain number of days between notifications, you can set that using the `days_between_notifications` preference.
+- If you want a certain time (in seconds) between notifications, you can set that using the `time_between_notifications` preference.
 - Read Alan Siu's [Introduction to Nudge](https://www.alansiu.net/2019/12/24/nudge/) blog post for a more in-depth introduction to Nudge.
 
 ## Embedded Python
