@@ -62,12 +62,6 @@ You will need to use [munki-pkg](https://github.com/munki/munki-pkg) to build th
 ## Credits
 This tool would not be possible without [nibbler](https://github.com/pudquick/nibbler), written by [Michael Lynn](https://twitter.com/mikeymikey).
 
-### Notes
-Because of the way git works, nudge will not contain the `Logs` folder required for the postinstall to complete.
-
-In order to create a properly working package, you will need to run the following command _before_ building the package:
-`munkipkg --sync /path/to/cloned_repo/nudge`.
-
 ## OS Support v1
 The following operating system and versions have been tested.
 - 10.10.0, 10.10.5
