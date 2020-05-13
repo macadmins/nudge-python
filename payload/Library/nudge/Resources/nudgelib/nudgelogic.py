@@ -39,10 +39,12 @@ class NudgeLogic():
         else:
             self._check_updates_availability()
             _only_background_updates(self._minor_updates_required())
-            self._no_nudge_all_time()
+        self._no_nudge_all_time()
         return self._update_nudgeprefs()
 
     def _check_local_url(self):
+        self.first_seen = app_pref('first_seen')
+        self.last_seen = app_pref('last_seen')
         if self.local_url:
             self.path_to_app = self.local_url
         else:
@@ -65,7 +67,6 @@ class NudgeLogic():
     def _no_nudge_all_time(self):
         if (self.time_between_notif > 0 and self.first_seen and self.last_seen):
             difference = _last_seen_vs_now(self.last_seen)
-            nudgelog(str(difference.days))
             if difference.seconds < self.time_between_notif:
                 info = 'Last seen date is within notification threshold'
                 nudgelog(f'{info}: {str(self.time_between_notif)} seconds')
