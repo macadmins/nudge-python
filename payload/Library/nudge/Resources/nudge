@@ -119,6 +119,7 @@ def button_understand():
     nudge.views['button.understand'].setHidden_(True)
     nudge.views['button.ok'].setHidden_(False)
     nudge.views['button.ok'].setEnabled_(True)
+    nudge.views['button.understand'].setEnabled_(False)
 
 
 def downloadfile(options):
@@ -708,6 +709,8 @@ def main():
 
             # Disable the ok button and require users to press understand
             # button first
+            nudge.views['button.understand'].setHidden_(False)
+            nudge.views['button.understand'].setEnabled_(True)
             nudge.views['button.ok'].setHidden_(True)
 
             # If the user doesn't close out of nudge, we want it to
@@ -720,6 +723,8 @@ def main():
 
             # Disable the ok button and require users to press understand
             # button first
+            nudge.views['button.understand'].setHidden_(False)
+            nudge.views['button.understand'].setEnabled_(True)
             nudge.views['button.ok'].setHidden_(True)
 
             # If the user doesn't close out of nudge, we want it to
@@ -732,6 +737,7 @@ def main():
 
             # Only require the ok button to exit out of nudge
             nudge.views['button.ok'].setHidden_(False)
+            nudge.views['button.ok'].setEnabled_(True)
             nudge.views['button.understand'].setHidden_(True)
 
             # If the user doesn't close out of nudge, we want it to
@@ -754,6 +760,7 @@ def main():
 
         # Only require the ok button to exit out of nudge
         nudge.views['button.ok'].setHidden_(False)
+        nudge.views['button.ok'].setEnabled_(True)
         nudge.views['button.understand'].setHidden_(True)
 
         timer = float(timer_day_3)
