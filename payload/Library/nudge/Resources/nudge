@@ -77,6 +77,7 @@ def determine_state_and_nudge():
             bring_nudge_to_forefront()
             # Pretend to open the button and open the update mechanism
             button_update(True)
+    nudge.views['field.deferralcount'].setStringValue_(str(NUDGE_DISMISSED_COUNT))
 
 
 def bring_nudge_to_forefront():
