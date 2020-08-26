@@ -80,6 +80,10 @@ The following operating system and versions have been tested with the embedded p
 - 10.14
 - 10.15
 
+## Alternative UI layouts
+
+Copy both .nib files from the layout's subdirectory under `alternative_ui` and replace the .nib files in `payload/Library/nudge/Resources/nudge.nib/`.
+
 ## Configuration File
 Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.
 
