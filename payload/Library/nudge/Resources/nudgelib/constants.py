@@ -42,7 +42,8 @@ UI_NUDGE_PREFS = (
 UI_FIELDS_2 = (
     'field.username',
     'field.serialnumber',
-    'field.updated')
+    'field.updated',
+    'field.deferralcount')
 COMPANY_LOGO = 'image.companylogo'
 UPDATESS = 'image.updatess'
 DEFAULT_IMAGES = (
@@ -63,6 +64,7 @@ H2TEXT = 'field.h2text'
 USERNAME = 'field.username'
 SERIAL_NUMBER = 'field.serialnumber'
 UPDATED = 'field.updated'
+DEFERRAL_COUNT = 'field.deferralcount'
 DAYS_REMAINING = 'field.daysremaining'
 DAYS_REMAINING_TEXT = 'field.daysremainingtext'
 PAST_DATE = 'Past date!'

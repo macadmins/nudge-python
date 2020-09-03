@@ -46,6 +46,7 @@ class Builder():
         able to exit the UI.'''
         nudgelog('User clicked on understand button - enabling ok button')
         self.nudge.views['button.understand'].setHidden_(True)
+        self.nudge.views['button.understand'].setEnabled_(False)
         self.nudge.views['button.ok'].setHidden_(False)
         self.nudge.views['button.ok'].setEnabled_(True)
 

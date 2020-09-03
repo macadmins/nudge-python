@@ -11,10 +11,11 @@ from AppKit import NSImage
 
 from .constants import (DEFAULT_IMAGES, COMPANY_LOGO, UPDATESS,
                         UI_NUDGE_PREFS, UI_FIELDS, USERNAME,
-                        SERIAL_NUMBER, UPDATED, MORE_INFO,
-                        DAYS_REMAINING, DAYS_REMAINING_TEXT,
-                        PAST_DATE, NUDGE_DISMISSED_COUNT,
-                        ACCEPTABLE_APPS, OK, UNDERSTAND, NO_TIMER)
+                        DEFERRAL_COUNT, SERIAL_NUMBER, UPDATED,
+                        MORE_INFO, DAYS_REMAINING,
+                        DAYS_REMAINING_TEXT, PAST_DATE,
+                        NUDGE_DISMISSED_COUNT, ACCEPTABLE_APPS,
+                        OK, UNDERSTAND, NO_TIMER)
 from .timercontroler import TimerController
 from .helpers import (get_console_username,
                       get_serial,
@@ -25,8 +26,8 @@ from .prefs import set_app_pref
 
 class UX():
     '''Class that define the UX a user will have'''
-    def __init__(self, builder_ojb, nudge_prefs):
-        self.nibbler = builder_ojb
+    def __init__(self, builder_obj, nudge_prefs):
+        self.nibbler = builder_obj
         self.nudge = self.nibbler.nudge
         self.nudge_path = self.nibbler.nudge_path
         self.nudge_prefs = nudge_prefs
@@ -84,6 +85,7 @@ class UX():
         self.nudge.views[USERNAME].setStringValue_(str(get_console_username()))
         self.nudge.views[SERIAL_NUMBER].setStringValue_(str(get_serial()))
         self.nudge.views[UPDATED].setStringValue_('No')
+        self.nudge.views[DEFERRAL_COUNT].setStringValue_(str(NUDGE_DISMISSED_COUNT))
 
     def _hide_more_info(self):
         if not self.nudge_prefs['more_info_url']:
@@ -154,35 +156,40 @@ class UX():
         return None
 
     def _get_low_pressure(self):
-        self._set_buttons_hidden_state(False, True)
+        self._set_buttons_state(ok_button=True)
         return float(self.nudge_prefs['timer_initial'])
 
     def _get_aggressive(self):
-        self._set_buttons_hidden_state(True, None)
+        self._set_buttons_state(understand_button=True)
         return float(self.nudge_prefs['timer_day_3'])
 
     def _get_more_aggressive(self):
-        self._set_buttons_hidden_state(True, None)
+        self._set_buttons_state(understand_button=True)
         return float(self.nudge_prefs['timer_day_1'])
 
     def _get_very_aggressive(self):
-        self._set_buttons_hidden_state()
+        self._set_buttons_state()
         return float(self.nudge_prefs['timer_final'])
 
     def _get_stupidly_aggressive(self):
-        self._set_buttons_hidden_state()
+        self._set_buttons_state()
         return float(self.nudge_prefs['timer_elapsed'])
 
-    def _set_buttons_hidden_state(self,
-                                  ok_button=True,
-                                  understand_button=True):
-        self.nudge.views[OK].setHidden_(ok_button)
-        if understand_button is not None:
-            self.nudge.views[UNDERSTAND].setHidden_(understand_button)
+    def _set_buttons_state(self,
+                           ok_button=False,
+                           understand_button=False):
+        self.nudge.views[UNDERSTAND].setHidden_(True)
+        self.nudge.views[OK].setHidden_(True)
+        if ok_button:
+            self.nudge.views[OK].setHidden_(False)
+            self.nudge.views[OK].setEnabled_(True)
+        if understand_button:
+            self.nudge.views[UNDERSTAND].setHidden_(False)
+            self.nudge.views[UNDERSTAND].setEnabled_(True)
 
     def _set_no_cutoff_date_ux(self):
         self._set_days_remaining(hide=True)
-        self._set_buttons_hidden_state(False, True)
+        self._set_buttons_hidden_state(ok_button=True)
 
     def _no_timer(self):
         if self.nudge_prefs['no_timer']:

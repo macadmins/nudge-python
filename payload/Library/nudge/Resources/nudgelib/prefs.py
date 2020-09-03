@@ -49,6 +49,7 @@ DEFAULT_PREFS = {
     "cut_off_date_warning": 3,
     "time_between_notifications": 0,
     "dismissal_count_threshold": 9999999,
+    "dismissed_count": 0,
     "logo_path": "company_logo.png",
     "main_subtitle_text": "A friendly reminder from your local IT team",
     "main_title_text": "macOS Update",

@@ -8,6 +8,7 @@ from Foundation import NSObject
 # pylint: enable=no-name-in-module
 
 from .helpers import nudgelog
+from .constants import DEFERRAL_COUNT
 
 
 class TimerController(NSObject):
@@ -28,7 +29,6 @@ class TimerController(NSObject):
 
     def determine_state_and_nudge(self):
         '''Determine the state of nudge and re-fresh window'''
-        nudge = self.nudge
         workspace = NSWorkspace.sharedWorkspace()
         currently_active = NSApplication.sharedApplication().isActive()
         frontmost_app = workspace.frontmostApplication().bundleIdentifier()
@@ -40,7 +40,7 @@ class TimerController(NSObject):
             if self.nudge_dismissed_count < self.dismissall_count_threshold:
                 nudgelog('Nudge dismissed count under threshold')
                 self.nudge_dismissed_count += 1
-                bring_nudge_to_forefront(nudge)
+                bring_nudge_to_forefront(self.nudge)
             else:
                 # Get more aggressive - new behavior
                 nudgelog('Nudge dismissed count over threshold')
@@ -54,22 +54,27 @@ class TimerController(NSObject):
                         # The app bundle contains file://, quoted path and trailing slashes
                         app_bundle_path = unquote(urlparse(app_bundle).path).rstrip('/')
                         # Add Software Update pane or macOS upgrade app to acceptable app list
-                        if app_bundle_path == nudge.path_to_app:
+                        if app_bundle_path == self.nudge.path_to_app:
                             self.acceptable_apps.append(app_name)
                     else:
                         # Some of the apps from NSWorkspace don't have bundles,
                         # so force empty string
                         app_bundle_path = ''
                     # Hide any apps that are not in acceptable list or are not the macOS upgrade app
-                    if (app_name not in self.acceptable_apps) or (app_bundle_path != nudge.path_to_app):
+                    if (app_name not in self.acceptable_apps) or (app_bundle_path != self.nudge.path_to_app):
                         app.hide()
                         # Race condition with NSWorkspace. Python is faster :)
                         time.sleep(0.001)
                 # Another small sleep to ensure we can bring Nudge on top
                 time.sleep(0.5)
-                bring_nudge_to_forefront(nudge)
+                bring_nudge_to_forefront(self.nudge)
                 # Pretend to open the button and open the update mechanism
-                nudge.button_update(True)
+                self.nudge.button_update(True)
+            self.ux_when_timer_is_controlling()
+
+    def ux_when_timer_is_controlling(self):
+        nudgelog(f'Setting up DEFERRAL COUNT value to: {self.nudge_dismissed_count}')
+        self.nudge.nudge.views[DEFERRAL_COUNT].setStringValue_(str(self.nudge_dismissed_count))
 
 
 def bring_nudge_to_forefront(nudge):
