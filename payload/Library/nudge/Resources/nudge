@@ -3,6 +3,8 @@
 
 '''nudge - python wrapper for major OS updates.'''
 
+from Foundation import NSRunLoop, NSRunLoopCommonModes
+
 from nudgelib.helpers import (nudge_already_loaded,
                               not_in_userland,
                               start_info,
