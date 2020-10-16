@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # If you change your agent file name, update the following line
-launch_agent_plist_name='com.erikng.nudge.plist'
+launch_agent_plist_name='com.macadmins.nudge.plist'
 
 # Base paths
 launch_agent_base_path='Library/LaunchAgents/'

@@ -8,9 +8,9 @@
 			<key>PayloadDisplayName</key>
 			<string>Nudge Configuration</string>
 			<key>PayloadIdentifier</key>
-			<string>com.erikng.nudge</string>
+			<string>com.macadmins.nudge</string>
 			<key>PayloadType</key>
-			<string>com.erikng.nudge</string>
+			<string>com.macadmins.nudge</string>
 			<key>PayloadUUID</key>
 			<string>41AF5F92-8C0F-40B2-B6A6-09899F3D23A2</string>
 			<key>PayloadVersion</key>
@@ -20,7 +20,7 @@
 			<key>button_sub_titletext</key>
 			<string>Click on the button below.</string>
 			<key>cut_off_date</key>
-			<string>2019-12-31-00:00</string>
+			<string>2020-09-24-16:00</string>
 			<key>cut_off_date_warning</key>
 			<integer>14</integer>
 			<key>time_between_notifications</key>
@@ -28,15 +28,15 @@
 			<key>dismissal_count_threshold</key>
 			<integer>10</integer>
 			<key>logo_path</key>
-			<string>/path/to/company_logo.png</string>
+			<string>/Library/nudge/Resources/company_logo.png</string>
 			<key>main_subtitle_text</key>
 			<string>A friendly reminder from your local IT team</string>
 			<key>main_title_text</key>
 			<string>macOS Update</string>
 			<key>minimum_os_version</key>
-			<string>10.14.6</string>
+			<string>10.15.6</string>
 			<key>minimum_os_sub_build_version</key>
-			<string>18G84</string>
+			<string>19G2021</string>
 			<key>more_info_url</key>
 			<string>https://www.google.com</string>
 			<key>no_timer</key>
@@ -54,7 +54,7 @@
 			<key>random_delay</key>
 			<false/>
 			<key>screenshot_path</key>
-			<string>/path/to/update_ss.png</string>
+			<string>/Library/nudge/Resources/update_ss.png</string>
 			<key>timer_day_1</key>
 			<integer>600</integer>
 			<key>timer_day_3</key>
@@ -74,13 +74,13 @@
 	<key>PayloadDisplayName</key>
 	<string>Nudge Configuration</string>
 	<key>PayloadIdentifier</key>
-	<string>com.erikng.nudge.56B30AFD-4941-4959-8803-911E7FBE54AC</string>
+	<string>com.macadmins.nudge.2539D674-2B6B-4553-B2F5-2AEBC90CDD7C</string>
 	<key>PayloadScope</key>
 	<string>System</string>
 	<key>PayloadType</key>
 	<string>Configuration</string>
 	<key>PayloadUUID</key>
-	<string>56B30AFD-4941-4959-8803-911E7FBE54AC</string>
+	<string>2539D674-2B6B-4553-B2F5-2AEBC90CDD7C</string>
 	<key>PayloadVersion</key>
 	<integer>1</integer>
 </dict>

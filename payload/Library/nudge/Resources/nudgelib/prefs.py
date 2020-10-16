@@ -45,7 +45,7 @@ from .constants import BUNDLE_ID
 DEFAULT_PREFS = {
     "button_title_text": "Ready to start the update?",
     "button_sub_titletext": "Click on the button below.",
-    "cut_off_date": False,  # set it in the form "YYYY:MM:DD:hh:mm" or leave it as False
+    "cut_off_date": False,  # set it in the form "Y-m-d:H:M" or leave it as False
     "cut_off_date_warning": 3,
     "time_between_notifications": 0,
     "dismissal_count_threshold": 9999999,

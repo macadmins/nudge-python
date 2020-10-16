@@ -1,6 +1,8 @@
 # pylint: disable=too-many-instance-attributes, missing-module-docstring
 # pylint: disable=invalid-name, expression-not-assigned
 
+import sys
+
 from os.path import join
 from datetime import datetime, timedelta
 
@@ -112,8 +114,12 @@ class UX():
         if not cut_off_date:
             cut_off_date_strp = today + timedelta(days=update_minor_days)
         else:
-            cut_off_date_strp = datetime.strptime(cut_off_date,
-                                                  '%Y-%m-%d-%H:%M')
+            try:
+                cut_off_date_strp = datetime.strptime(cut_off_date,
+                                                      '%Y-%m-%d-%H:%M')
+            except ValueError as err:
+                nudgelog(f'Malformed date: {err}')
+                sys.exit(20)
         self.date_diff_seconds = (cut_off_date_strp - today).total_seconds()
         self.date_diff_days = int(round(self.date_diff_seconds / 86400))
 

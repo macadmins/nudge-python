@@ -5,7 +5,7 @@ Created by Joaquin Cabrerizo on 2020-03-30.
 
 Commonly used constants
 """
-BUNDLE_ID = 'com.erikng.nudge'
+BUNDLE_ID = 'com.macadmins.nudge'
 ACCEPTABLE_APPS = [
     'com.apple.loginwindow',
     'com.apple.systempreferences',

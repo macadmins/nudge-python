@@ -1,6 +1,6 @@
 {
     "distribution_style": true,
-    "identifier": "com.erikng.nudge",
+    "identifier": "com.macadmins.nudge",
     "install_location": "/",
     "name": "nudge-${version}.pkg",
     "ownership": "recommended",

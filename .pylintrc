@@ -10,7 +10,6 @@ disable=
     attribute-defined-outside-init,
     missing-function-docstring,
     too-few-public-methods,
-    fixme,
     no-else-return,
     deprecated-module,
     no-member
