@@ -518,6 +518,13 @@ def main():
     os_version_major = get_os_version_major()
     os_version_sub_build = get_os_sub_build_version()
 
+    # Bail if python framework was not built on Big Sur
+    if os_version_major == '10.16':
+        nudgelog('Detected Big Sur running version 10.16. Nudge cannot be '\
+                 'reliably enforced. To fix this, create a Python.framework '\
+                 'file on a machine running Big Sur or higher.')
+        exit(1)
+
     # Example 10.14.6 (18G103) >=  10.14.6 (18G84)
     if os_version_sub_build >= LooseVersion(minimum_os_sub_build_version) and update_minor:
         nudgelog('OS version sub build is higher or equal to the minimum threshold: %s' % str(os_version_sub_build))
