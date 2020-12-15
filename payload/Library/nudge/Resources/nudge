@@ -193,11 +193,15 @@ def get_os_version():
 def get_os_version_major():
     '''Return major OS version.'''
     full_os = platform.mac_ver()[0]
+    # Handle Big Sur and higher since major version is now the first portion
+    split_os = full_os.split('.')
+    if LooseVersion(split_os[0]) >= LooseVersion('11'):
+        return LooseVersion(split_os[0])
     # Sometimes the OS version will return without the dot release
     # For example, it may show as 10.15.0 instead of 10.15
-    if len(full_os.split('.')) == 3:
+    if len(split_os) == 3:
         return LooseVersion(full_os.rsplit('.', 1)[0])
-    elif len(full_os.split('.')) == 2:
+    elif len(split_os) == 2:
         return LooseVersion(full_os)
     else:
         nudgelog('Cannot reliably determine OS major version. Exiting...')
@@ -513,6 +517,11 @@ def main():
     # so make sure this error doesn't happen and the comparison doesn't fail.
     if '.' not in minimum_os_version_major:
         minimum_os_version_major = minimum_os_version
+
+    # Handle Big Sur and higher since major version is now the first portion
+    split_minimum_os_version_major = minimum_os_version_major.split('.')
+    if LooseVersion(split_minimum_os_version_major[0]) >= LooseVersion('11'):
+        minimum_os_version_major = split_minimum_os_version_major[0]
 
     os_version = get_os_version()
     os_version_major = get_os_version_major()
