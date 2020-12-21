@@ -308,8 +308,7 @@ def download_apple_updates():
 
     cmd = [
         '/usr/sbin/softwareupdate',
-        '-da',
-        '--force'
+        '-da'
     ]
 
     try:
