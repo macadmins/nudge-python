@@ -1,44 +1,24 @@
-# Nudge (macadmin's Slack #nudge)
+# Nudge-Python (macadmin's Slack #nudge)
+Nudge-Python is now considered End Of Life (EOL) as of February 11th, 2021. The last official version is 2.0.1 which enabled Big Sur support through the use of [macadmins/python 3.9.1](https://github.com/macadmins/python)
+
+If you are using a fork of Nudge-Python [(a well known one is located here)](https://github.com/LcTrKiD/nudge), support will not be offered unless the developer of the fork decides to continue support.
+
+[While Nudge-Python does support Big Sur, it is recommended to use the new version of Nudge, based on SwiftUI 5.2. You can find that project here.](https://github.com/macadmins/nudge)
+
+On March 1st, 2021, this project will be marked as archived through GitHub.
 
 ## Nudge functionality overview
 - Nudge, rather than trying to install updates, merely prompts users to install updates via an approved method (System Preferences, Munki, Jamf, etc.).
 - By default, Nudge will open every 30 minutes, at the 0 and 30 minute mark. This is because of the default launch agent. If you find this behavior too aggressive, please change the launch agent.
 - The timers are for if the user minimizes/hides the window. It will re-load the window into the foreground, taking precedence over any window.
-- If you want a certain number of days between notifications, you can set that using the `days_between_notifications` preference.
 - Read Alan Siu's [Introduction to Nudge](https://www.alansiu.net/2019/12/24/nudge/) blog post for a more in-depth introduction to Nudge.
 
-## Embedded Python
-As of v2.0, Nudge now uses its own embedded python (currently v3.8). This is due to Apple's upcoming removal of Python2.
+## Macadmins Python
+As of v2.0.1, Nudge now requires [macadmins/python 3.9.1](https://github.com/macadmins/python). 3.9.1 is backwards compatible with 10.9.5 through Big Sur 11.0
 
 Gurl has been updated from the Munki 4.0 release.
 
 Nibbler has been updated to support python 3.
-
-### Building embedded python framework
-
-To reduce the size of the git repository, you **must** create your own Python. To do this, simply run the `./build_python_framework` script within the repository.
-
-This process was tested on Catalina only.
-
-```
-./build_python_framework
-
-Cloning relocatable-python tool from github...
-Cloning into '/tmp/relocatable-python-git'...
-remote: Enumerating objects: 28, done.
-remote: Counting objects: 100% (28/28), done.
-remote: Compressing objects: 100% (19/19), done.
-remote: Total 78 (delta 12), reused 19 (delta 9), pack-reused 50
-Unpacking objects: 100% (78/78), done.
-Downloading https://www.python.org/ftp/python/3.8.0/python-3.8.0-macosx10.9.pkg...
-
-...
-
-Done!
-Customized, relocatable framework is at /Library/nudge/Python.framework
-Moving Python.framework to nudge munki-pkg payload folder
-Taking ownership of the file to not break git
-```
 
 ## Important Information
 You most certainly want to customize the following values:
@@ -56,6 +36,8 @@ Also, you will at the very least want to change the `company_logo.png`
 
 ## Building this package
 You will need to use [munki-pkg](https://github.com/munki/munki-pkg) to build this package.
+
+** This is not to be confused with [munki](https://github.com/munki/munki).** Munki-Pkg is a standalone project that works with all macOS tooling and MDMs
 
 ## Credits
 This tool would not be possible without [nibbler](https://github.com/pudquick/nibbler), written by [Michael Lynn](https://twitter.com/mikeymikey).
@@ -75,10 +57,11 @@ The following operating system and versions have been tested.
 - 10.14 -> 10.14.6
 - 10.15 -> 10.15.1
 
-## OS Support v2 (embedded python)
+## OS Support v2 (macadmins python)
 The following operating system and versions have been tested with the embedded python.
 - 10.14
 - 10.15
+- 11
 
 ## Configuration File
 Essentially every component of the UI is customizable, all through a JSON configuration file. An [example file](/example_config.json) is available within the code repository.

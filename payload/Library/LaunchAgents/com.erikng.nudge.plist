@@ -10,6 +10,7 @@
 	</array>
 	<key>ProgramArguments</key>
 	<array>
+		<string>/Library/ManagedFrameworks/Python/Python3.framework/Versions/Current/bin/python3</string>
 		<string>/Library/nudge/Resources/nudge</string>
 		<string>--jsonurl=https://fake.domain.com/path/to/config.json</string>
 	</array>
