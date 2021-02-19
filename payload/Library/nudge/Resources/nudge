@@ -1,4 +1,4 @@
-#!/Library/nudge/Python.framework/Versions/3.8/bin/python3
+#!/Library/ManagedFrameworks/Python/Python3.framework/Versions/Current/bin/python3
 # -*- coding: utf-8 -*-
 '''nudge - python wrapper for major OS updates.'''
 import json
